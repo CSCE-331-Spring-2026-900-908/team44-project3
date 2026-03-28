@@ -335,3 +335,4 @@ cython_debug/
 !.pixi/config.toml
 
 .svelte-kit/
+.DS_Store

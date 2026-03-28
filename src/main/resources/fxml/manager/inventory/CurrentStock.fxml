@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<!--FXML layout for the current stock screen in the manager inventory section, defining the user interface components and their arrangement.
+This layout includes a label for the screen title and a TableView for displaying 
+the current inventory stock with columns for item name, category, quantity, and unit.
+The components are arranged in a VBox to create a clear and organized interface for the manager 
+to view the current stock levels of inventory items.-->
+<StackPane
+   fx:controller="team44.project2.controller.manager.inventory.CurrentStockController"
+   xmlns="http://javafx.com/javafx/25"
+   xmlns:fx="http://javafx.com/fxml/1"
+   prefHeight="400.0"
+   prefWidth="600.0">
+   <children>
+      <VBox prefHeight="550.0" prefWidth="600.0">
+         <children>
+            <Label text="Look at Inventory" />
+            <TableView fx:id="inventoryTable" prefWidth="600.0">
+               <columns>
+                  <TableColumn fx:id="nameColumn" text="Item" prefWidth="150"/>
+                  <TableColumn fx:id="categoryColumn" text="Category" prefWidth="150"/>
+                  <TableColumn fx:id="quantityColumn" text="Quantity" prefWidth="150"/>
+                  <TableColumn fx:id="unitColumn" text="Unit" prefWidth="150"/>
+               </columns>
+            </TableView>
+         </children>
+      </VBox>
+   </children>
+</StackPane>

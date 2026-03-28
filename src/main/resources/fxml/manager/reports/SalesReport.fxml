@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!--FXML layout for the sales report screen in the manager reports section, displaying aggregated sales data by individual menu items within a specified time window.
+This layout includes a back button, date pickers for selecting the start and end dates of the report, and a table showing item name, quantity sold, and total revenue.
+Navigation menu allows switching between other reports (X-Report, Z-Report, Ordering Trends).
+The table is sorted alphabetically by item name for easy navigation.-->
+
+<ScrollPane fitToWidth="true" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="team44.project2.controller.manager.reports.SalesReportController">
+    <content>
+        <VBox spacing="20">
+            <padding>
+                <Insets bottom="20" left="20" right="20" top="20" />
+            </padding>
+
+            <HBox prefHeight="25.0" prefWidth="567.0" spacing="15">
+                <Button onAction="#handleBack" prefWidth="49.0" text="Back" />
+                <DatePicker fx:id="startDatePicker" promptText="Start date" />
+                <DatePicker fx:id="endDatePicker" promptText="End date" />
+                <MenuButton mnemonicParsing="false" text="Select Report">
+                    <items>
+                        <MenuItem fx:id="xReportLinkButton" mnemonicParsing="false" text="X-Report" />
+                        <MenuItem fx:id="zReportLinkButton" mnemonicParsing="false" text="Z-Report" />
+                        <MenuItem fx:id="orderingTrendsLinkButton" mnemonicParsing="false" text="Ordering Trends" />
+                    </items>
+                </MenuButton>
+            </HBox>
+
+            <VBox spacing="10">
+                <Label alignment="CENTER" maxWidth="Infinity" text="Sales by Item" style="-fx-font-size: 16; -fx-font-weight: bold;" />
+                
+                <!-- Table displaying aggregated sales metrics for each menu item across the selected date range -->
+                <TableView fx:id="salesTable" prefHeight="400.0">
+                    <columns>
+                        <TableColumn prefWidth="250.0" text="Item Name" fx:id="itemNameColumn" />
+                        <TableColumn prefWidth="150.0" text="Quantity Sold" fx:id="quantityColumn" />
+                        <TableColumn prefWidth="200.0" text="Total Revenue" fx:id="revenueColumn" />
+                    </columns>
+                </TableView>
+            </VBox>
+        </VBox>
+    </content>
+</ScrollPane>

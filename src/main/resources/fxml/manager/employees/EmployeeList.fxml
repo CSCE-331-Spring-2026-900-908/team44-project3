@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<!--FXML layout for the employee list screen in the manager employees section, defining the user interface components and their arrangement.
+This layout includes a back button, a TableView for displaying employee information with columns for first name, 
+last name, role, email, and active status, and buttons for adding, editing, and deleting employees.
+The components are arranged in a VBox with appropriate spacing to create a clear and user-friendly interface 
+for managing employee records.-->
+<VBox prefHeight="400.0" prefWidth="655.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="team44.project2.controller.manager.employees.EmployeeListController">
+    <HBox spacing="10">
+        <children>
+            <Button text="Back" onAction="#handleBack"/>
+        </children>
+    </HBox>
+
+    <TableView fx:id="employeeTable" prefHeight="400" prefWidth="618.0">
+        <columns>
+            <TableColumn fx:id="firstNameColumn" prefWidth="120" text="First Name" />
+            <TableColumn fx:id="lastNameColumn" prefWidth="120" text="Last Name" />
+            <TableColumn fx:id="roleColumn" prefWidth="100" text="Role" />
+            <TableColumn fx:id="emailColumn" prefWidth="180" text="Email" />
+            <TableColumn fx:id="activeColumn" prefWidth="80" text="Active" />
+        </columns>
+    </TableView>
+
+    <HBox spacing="10">
+        <children>
+            <Button text="Add Employee" onAction="#handleAddEmployee"/>
+            <Button text="Edit Employee" onAction="#handleEditEmployee"/>
+            <Button text="Delete Employee" onAction="#handleDeleteEmployee"/>
+        </children>
+    </HBox>
+</VBox>

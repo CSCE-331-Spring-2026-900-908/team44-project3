@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!--FXML layout for the ordering trends report screen in the manager reports section, defining the user interface components and their arrangement.
+This layout includes a back button, date pickers for selecting the start and end dates of the report, and 
+three sections for displaying line charts of product sales, total dollar sales, and inventory usage over time.
+Each section includes a button for toggling logarithmic scaling on the Y-axis and a label for the chart title. 
+The components are arranged in a VBox with appropriate spacing and padding to create a clear and 
+organized interface for the manager to view ordering trends and inventory usage.-->
+
+<ScrollPane fitToWidth="true" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="team44.project2.controller.manager.reports.OrderingTrendsController">
+
+    <content>
+         <VBox spacing="20">
+            <padding>
+               <Insets bottom="20" left="20" right="20" top="20" />
+            </padding>
+
+            <HBox prefHeight="25.0" prefWidth="567.0" spacing="15">
+                <Button onAction="#handleBack" prefWidth="49.0" text="Back" />
+                <DatePicker fx:id="orderingTrendsStartDatePicker" promptText="Start date" />
+                <DatePicker fx:id="orderingTrendsEndDatePicker" promptText="End date" />
+            <MenuButton mnemonicParsing="false" text="Select Report">
+              <items>
+                <MenuItem fx:id="xReportLinkButton" mnemonicParsing="false" text="X-Report"  />
+                <MenuItem fx:id="zReportLinkButton" mnemonicParsing="false" text="Z-Report" />
+                  <MenuItem fx:id="salesReportLinkButton" mnemonicParsing="false" text="Sales Report" />
+              </items>
+            </MenuButton>
+            </HBox>
+
+            <VBox spacing="10">
+                <HBox alignment="CENTER_RIGHT">
+                    <Button fx:id="productLogButton" text="Log Y" />
+                </HBox>
+
+                <LineChart fx:id="orderingTrendsProductSalesChart" prefHeight="350">
+                    <xAxis>
+                        <CategoryAxis />
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis />
+                    </yAxis>
+                </LineChart>
+
+                <Label fx:id="orderingTrendsProductLabel" alignment="CENTER" maxWidth="Infinity" text="Product Sales Over Time" />
+            </VBox>
+
+            <VBox spacing="10">
+                <HBox alignment="CENTER_RIGHT">
+                    <Button fx:id="dollarLogButton" text="Log Y" />
+                </HBox>
+
+                <LineChart fx:id="orderingTrendsDollarSalesChart" prefHeight="350">
+                    <xAxis>
+                        <CategoryAxis />
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis />
+                    </yAxis>
+                </LineChart>
+
+                <Label fx:id="orderingTrendsDollarLabel" alignment="CENTER" maxWidth="Infinity" text="Total Dollar Sales Over Time" />
+            </VBox>
+
+            <VBox spacing="10">
+                <LineChart fx:id="inventoryUsageChart" prefHeight="350">
+                    <xAxis>
+                        <CategoryAxis />
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis />
+                    </yAxis>
+                </LineChart>
+
+                <Label fx:id="inventoryUsageLabel" alignment="CENTER" maxWidth="Infinity" text="Inventory Usage Over Time" />
+            </VBox>
+
+        </VBox>
+    </content>
+</ScrollPane>

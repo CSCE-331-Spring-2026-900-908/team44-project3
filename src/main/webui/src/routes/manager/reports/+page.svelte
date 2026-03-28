@@ -129,7 +129,7 @@
                 </tr>
             </thead>
             <tbody>
-                {#each salesData as row (row.productName)}
+                {#each salesData as row, i (i)}
                     <tr>
                         <td>{row.productName}</td>
                         <td>{row.quantity}</td>

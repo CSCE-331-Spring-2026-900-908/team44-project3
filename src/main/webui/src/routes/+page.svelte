@@ -35,7 +35,7 @@
 <div class="login-page">
     <div class="login-card card">
         <div class="login-header">
-            <h1>Team 44 Boba POS</h1>
+            <h1>Boba POS</h1>
             <p>Point of Sale</p>
         </div>
 

@@ -1,5 +1,6 @@
 package team44.project2.resource;
 
+import io.smallrye.common.annotation.Blocking;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -14,6 +15,7 @@ import team44.project2.service.OrderService;
 import java.math.BigDecimal;
 import java.util.List;
 
+@Blocking
 @Path("/api/orders")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

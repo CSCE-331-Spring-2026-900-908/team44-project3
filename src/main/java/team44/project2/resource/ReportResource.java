@@ -1,5 +1,6 @@
 package team44.project2.resource;
 
+import io.smallrye.common.annotation.Blocking;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -10,6 +11,7 @@ import team44.project2.service.ReportService;
 import java.time.LocalDate;
 import java.util.List;
 
+@Blocking
 @Path("/api/reports")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

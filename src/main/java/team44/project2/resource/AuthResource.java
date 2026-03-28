@@ -1,5 +1,6 @@
 package team44.project2.resource;
 
+import io.smallrye.common.annotation.Blocking;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -10,6 +11,7 @@ import jakarta.ws.rs.core.Response;
 import team44.project2.model.Employee;
 import team44.project2.service.AuthService;
 
+@Blocking
 @Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)

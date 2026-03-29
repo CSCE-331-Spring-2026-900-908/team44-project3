@@ -84,7 +84,7 @@
 
 <div class="ordering-layout">
     <header class="ordering-header">
-        <h1>Boba POS</h1>
+        <h1>Team 44 Boba POS</h1>
         <div class="header-right">
             <span class="employee-name">{getDisplayName()}</span>
             <button class="btn-ghost" onclick={logout}>Logout</button>

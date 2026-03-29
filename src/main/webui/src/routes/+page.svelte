@@ -35,8 +35,7 @@
 <div class="login-page">
     <div class="login-card card">
         <div class="login-header">
-            <h1>Boba POS</h1>
-            <p>Point of Sale</p>
+            <h1>Team 44 Boba POS</h1>
         </div>
 
         <form onsubmit={handleLogin}>
@@ -79,7 +78,7 @@
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #FF5A5A 0%, #FFD45A 100%);
     }
 
     .login-card {

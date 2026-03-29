@@ -35,7 +35,7 @@
 <div class="manager-layout">
     <aside class="manager-sidebar">
         <div class="sidebar-brand">
-            <h2>Boba POS</h2>
+            <h2>Team 44 Boba POS</h2>
             <span class="role-label">Manager</span>
         </div>
 
@@ -70,7 +70,7 @@
 
     .manager-sidebar {
         width: 220px;
-        background: #1e293b;
+        background: #2d2017;
         color: white;
         display: flex;
         flex-direction: column;

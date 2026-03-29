@@ -90,7 +90,7 @@
 
     .item-card:hover:not(:disabled) {
         border-color: var(--color-primary);
-        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+        box-shadow: 0 0 0 2px rgba(255, 90, 90, 0.15);
     }
 
     .item-card.unavailable {

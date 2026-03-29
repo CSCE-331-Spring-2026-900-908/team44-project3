@@ -209,7 +209,7 @@
 
     .method-btn:hover {
         border-color: var(--color-primary);
-        background: #eef2ff;
+        background: #fff0e6;
     }
 
     .method-btn small {

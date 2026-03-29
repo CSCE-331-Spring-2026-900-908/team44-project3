@@ -7,25 +7,25 @@
             title: 'Employees',
             description: 'Manage staff accounts and roles',
             path: '/manager/employees' as const,
-            color: '#4f46e5'
+            color: '#FF5A5A'
         },
         {
             title: 'Menu',
             description: 'Edit menu items, categories, and pricing',
             path: '/manager/menu' as const,
-            color: '#16a34a'
+            color: '#FF8B5A'
         },
         {
             title: 'Inventory',
             description: 'Track stock levels and reorders',
             path: '/manager/inventory' as const,
-            color: '#d97706'
+            color: '#FFA95A'
         },
         {
             title: 'Reports',
             description: 'Sales, X/Z reports, and trends',
             path: '/manager/reports' as const,
-            color: '#dc2626'
+            color: '#FFD45A'
         }
     ] as const;
 </script>

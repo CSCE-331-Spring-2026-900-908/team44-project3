@@ -1,6 +1,6 @@
-# Project 2 Team 44
+# Project 3 Team 44
 
-A Point-of-Sale (POS) system built in Java using Quarkus and JavaFX.
+A Point-of-Sale (POS) system built in Java using Quarkus and Svelte.
 
 ## Getting Started
 
@@ -38,21 +38,25 @@ Note: You may need to restart your terminal after installing.
 **Clone the GitHub repository (ssh):**
 
 ```shell
-git clone git@github.com:CSCE-331-Spring-2026-900-908/project2-team44.git
-cd project2-team44
+git clone git@github.com:CSCE-331-Spring-2026-900-908/team44-project3.git
+cd team44-project3
 ```
 
 **Clone the GitHub repository (https):**
 
 ```shell
-git clone https://github.com/CSCE-331-Spring-2026-900-908/project2-team44.git
-cd project2-team44
+git clone https://github.com/CSCE-331-Spring-2026-900-908/team44-project3.git
+cd team44-project3
 ```
 
 **Install all project tools:**
 
 ```shell
 pixi install
+```
+**If you are using a win64 machine for development:**
+```shell
+pixi run install-bun
 ```
 
 ### 3. IDE/Text Editor Setup

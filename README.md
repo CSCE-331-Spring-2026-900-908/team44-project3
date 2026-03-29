@@ -58,6 +58,7 @@ pixi install
 ```shell
 pixi run install-bun
 ```
+Note: Restart your terminal after installing bun so it's available in PATH.
 
 ### 3. IDE/Text Editor Setup
 

@@ -35,9 +35,6 @@
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
 
     $effect(() => {
-        if (!isCustomerMode()) {
-            void goto(resolve('/'));
-        }
         void loadCategories();
     });
 
@@ -175,7 +172,7 @@
                             </div>
                             <div class="cart-item-actions">
                                 <span>{formatCurrency(cartItem.totalPrice)}</span>
-                                <button class="btn-ghost remove-btn" onclick={() => { removeFromCart(i); }}>
+                                <button class="btn-ghost remove-btn" onclick={() => removeFromCart(i)}>
                                     &times;
                                 </button>
                             </div>

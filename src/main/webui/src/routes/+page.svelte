@@ -66,17 +66,14 @@
             <div class="role-select">
                 <p class="role-label">Select your role to continue</p>
                 <button class="role-btn customer" onclick={enterCustomer}>
-                    <span class="role-icon">☕</span>
                     <span class="role-name">Customer Kiosk</span>
                     <span class="role-desc">Browse menu & order in website or in house</span>
                 </button>
                 <button class="role-btn employee" onclick={() => { step = 'employee'; }}>
-                    <span class="role-icon">🧾</span>
                     <span class="role-name">POS System</span>
                     <span class="role-desc">Working POS from cashier view or employee only features</span>
                 </button>
                 <button class="role-btn manager" onclick={() => { step = 'manager'; }}>
-                    <span class="role-icon">🔧</span>
                     <span class="role-name">Manager Dashboard</span>
                     <span class="role-desc">Menus, Reports & Administration</span>
                 </button>

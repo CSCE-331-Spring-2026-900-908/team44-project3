@@ -49,7 +49,7 @@
 <style>
     .section-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 1.25rem;
     }
 
@@ -77,7 +77,7 @@
     }
 
     .section-card h3 {
-        font-size: 1.125rem;
+        font-size: 1.525rem;
         font-weight: 600;
         margin-bottom: 0.25rem;
     }

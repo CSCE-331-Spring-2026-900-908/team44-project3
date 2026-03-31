@@ -24,5 +24,35 @@
         justify-content: center;
         font-size: 2rem;
         cursor: pointer;
+        color: white;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Background layer */
+    .splash::before {
+        content: '';
+        position: absolute;
+        inset: -50%;
+        z-index: -1;
+
+        background: radial-gradient(circle at 30% 30%, #ff5a5a, transparent 60%),
+                    radial-gradient(circle at 70% 60%, #ffd45a, transparent 60%),
+                    radial-gradient(circle at 50% 80%, #ff8a5a, transparent 60%);
+
+        filter: blur(80px);
+        animation: blobMove 12s ease-in-out infinite alternate;
+    }
+
+    @keyframes blobMove {
+        0% {
+            transform: scale(1) translate(0%, 0%);
+        }
+        50% {
+            transform: scale(1.2) translate(10%, -10%);
+        }
+        100% {
+            transform: scale(1) translate(-10%, 10%);
+        }
     }
 </style>

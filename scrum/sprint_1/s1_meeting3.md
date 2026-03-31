@@ -1,12 +1,12 @@
-## Meeting 3 - Friday (3/27)
+# Meeting 3 - Friday (3/27)
 
-# Agenda
+## Agenda
 
 * General team check-in
 * Review current progress
 * Discuss future development goals
 
-# Minutes
+## Minutes
 
 * Conducted a brief status update across the team
 * Discussed enabling customers to place orders more effectively

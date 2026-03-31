@@ -13,10 +13,32 @@
     on:keydown={proceed}
     tabindex="0"
 >
-    click anywhere to start
+
+    <div class="top-center"
+    >Welcome to our Boba Shop!</div>
+    <div class="center"
+    
+    >Click anywhere to begin your order</div>
 </div>
 
+
+
 <style>
+
+    .top-center {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }   
+
     .splash {
         height: 100vh;
         display: flex;

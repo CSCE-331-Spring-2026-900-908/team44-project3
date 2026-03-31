@@ -77,7 +77,7 @@
 
     .item-card {
         background: var(--color-surface);
-        border: 1px solid var(--color-border);
+        border: 4px solid var(--color-border);
         border-radius: var(--radius);
         padding: 0.75rem;
         text-align: center;
@@ -99,11 +99,11 @@
 
     .item-name {
         font-weight: 500;
-        font-size: 0.875rem;
+        font-size: 1.175rem;
     }
 
     .item-price {
         color: var(--color-text-muted);
-        font-size: 0.8rem;
+        font-size: 1.2rem;
     }
 </style>

@@ -242,15 +242,15 @@
     }
 
     .category-sidebar {
-        width: 180px;
+        width: 220px;
         background: var(--color-surface);
-        border-right: 1px solid var(--color-border);
+        border-right: 10px solid var(--color-border);
         padding: 1rem;
         overflow-y: auto;
     }
 
     .category-sidebar h3 {
-        font-size: 0.75rem;
+        font-size: 0.95rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         color: var(--color-text-muted);
@@ -260,7 +260,7 @@
     .category-nav {
         display: flex;
         flex-direction: column;
-        gap: 0.25rem;
+        gap: 0.55rem;
     }
 
     .cat-btn {
@@ -268,7 +268,7 @@
         padding: 0.5rem 0.75rem;
         border-radius: var(--radius);
         background: transparent;
-        font-size: 0.875rem;
+        font-size: 1.075rem;
         font-weight: 500;
         text-transform: capitalize;
         transition: background var(--transition);

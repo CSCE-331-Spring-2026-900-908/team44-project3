@@ -74,7 +74,7 @@
         color: white;
         display: flex;
         flex-direction: column;
-        padding: 1.25rem 0;
+        padding: 1.85rem 0;
     }
 
     .sidebar-brand {
@@ -83,8 +83,8 @@
     }
 
     .sidebar-brand h2 {
-        font-size: 1.25rem;
-        font-weight: 700;
+        font-size: 1.30rem;
+        font-weight: 600;
     }
 
     .role-label {
@@ -106,8 +106,8 @@
         display: block;
         padding: 0.6rem 1rem;
         border-radius: var(--radius);
-        font-size: 0.875rem;
-        font-weight: 500;
+        font-size: 1.075rem;
+        font-weight: 700;
         color: rgba(255, 255, 255, 0.7);
         text-decoration: none;
         transition: background var(--transition), color var(--transition);
@@ -124,7 +124,7 @@
     }
 
     .sidebar-footer {
-        padding: 1rem 1.25rem 0;
+        padding: 1rem 1.35rem 0;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
         flex-direction: column;

@@ -2,8 +2,8 @@
     import type { MenuItem, CartItem, Customer } from '$lib/types';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
-    import { getCategories } from '$lib/api';
-    import { getEmployee, setEmployee, getDisplayName } from '$lib/stores/auth.svelte';
+    import { getCategories, authenticate } from '$lib/api';
+    import { isCustomerMode, setCustomerMode } from '$lib/stores/auth.svelte';
     import { formatCurrency } from '$lib/utils';
     import CategoryItems from '$lib/components/CategoryItems.svelte';
     import ItemCustomization from '$lib/components/ItemCustomization.svelte';
@@ -21,6 +21,12 @@
     let showCheckIn = $state(false);
     let showPayment = $state(false);
     let showComplete = $state(false);
+    let showExitModal = $state(false);
+
+    let exitEmail = $state('');
+    let exitPassword = $state('');
+    let exitError = $state('');
+    let exitLoading = $state(false);
 
     let completedOrderId = $state(0);
     let completedTip = $state(0);
@@ -29,9 +35,6 @@
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
 
     $effect(() => {
-        if (!getEmployee()) {
-            void goto(resolve('/'));
-        }
         void loadCategories();
     });
 
@@ -76,18 +79,42 @@
         showComplete = false;
     }
 
-    function logout() {
-        setEmployee(null);
-        void goto(resolve('/'));
+    function openExitModal() {
+        exitEmail = '';
+        exitPassword = '';
+        exitError = '';
+        showExitModal = true;
+    }
+
+    async function handleExit() {
+        exitError = '';
+        if (!exitEmail || !exitPassword) {
+            exitError = 'Please enter credentials.';
+            return;
+        }
+        exitLoading = true;
+        try {
+            const emp = await authenticate(exitEmail, exitPassword);
+            if (!emp) {
+                exitError = 'Invalid credentials.';
+                return;
+            }
+            setCustomerMode(false);
+            showExitModal = false;
+            await goto(resolve('/'));
+        } catch {
+            exitError = 'Authentication failed. Please try again.';
+        } finally {
+            exitLoading = false;
+        }
     }
 </script>
 
 <div class="ordering-layout">
     <header class="ordering-header">
-        <h1>Team 44 Boba POS</h1>
+        <h1>Team 44 Boba</h1>
         <div class="header-right">
-            <span class="employee-name">{getDisplayName()}</span>
-            <button class="btn-ghost" onclick={logout}>Logout</button>
+            <button class="btn-ghost exit-btn" onclick={openExitModal}>Exit Kiosk</button>
         </div>
     </header>
 
@@ -145,7 +172,7 @@
                             </div>
                             <div class="cart-item-actions">
                                 <span>{formatCurrency(cartItem.totalPrice)}</span>
-                                <button class="btn-ghost remove-btn" onclick={() => { removeFromCart(i); }}>
+                                <button class="btn-ghost remove-btn" onclick={() => removeFromCart(i)}>
                                     &times;
                                 </button>
                             </div>
@@ -170,6 +197,49 @@
         </aside>
     </div>
 </div>
+
+<!-- Exit kiosk modal -->
+{#if showExitModal}
+    <div class="modal-backdrop" onclick={() => (showExitModal = false)} role="none">
+        <div class="modal-box card" onclick={(e) => e.stopPropagation()} role="none">
+            <h2>Exit Kiosk</h2>
+            <p class="modal-sub">Enter employee credentials to exit customer view.</p>
+
+            <div class="form-group">
+                <label for="exit-email">Email</label>
+                <input
+                    id="exit-email"
+                    type="email"
+                    placeholder="Employee email"
+                    bind:value={exitEmail}
+                    autocomplete="username"
+                />
+            </div>
+
+            <div class="form-group">
+                <label for="exit-password">Password</label>
+                <input
+                    id="exit-password"
+                    type="password"
+                    placeholder="Password"
+                    bind:value={exitPassword}
+                    autocomplete="current-password"
+                />
+            </div>
+
+            {#if exitError}
+                <p class="error-text">{exitError}</p>
+            {/if}
+
+            <div class="modal-actions">
+                <button class="btn-ghost" onclick={() => (showExitModal = false)}>Cancel</button>
+                <button class="btn-primary" onclick={handleExit} disabled={exitLoading}>
+                    {exitLoading ? 'Verifying...' : 'Exit'}
+                </button>
+            </div>
+        </div>
+    </div>
+{/if}
 
 <ItemCustomization
     open={showCustomize}
@@ -230,9 +300,14 @@
         gap: 0.75rem;
     }
 
-    .employee-name {
-        font-size: 0.875rem;
+    .exit-btn {
+        font-size: 0.75rem;
         color: var(--color-text-muted);
+        opacity: 0.6;
+    }
+
+    .exit-btn:hover {
+        opacity: 1;
     }
 
     .ordering-body {
@@ -242,15 +317,15 @@
     }
 
     .category-sidebar {
-        width: 220px;
+        width: 180px;
         background: var(--color-surface);
-        border-right: 10px solid var(--color-border);
+        border-right: 1px solid var(--color-border);
         padding: 1rem;
         overflow-y: auto;
     }
 
     .category-sidebar h3 {
-        font-size: 0.95rem;
+        font-size: 0.75rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         color: var(--color-text-muted);
@@ -260,7 +335,7 @@
     .category-nav {
         display: flex;
         flex-direction: column;
-        gap: 0.55rem;
+        gap: 0.25rem;
     }
 
     .cat-btn {
@@ -268,7 +343,7 @@
         padding: 0.5rem 0.75rem;
         border-radius: var(--radius);
         background: transparent;
-        font-size: 1.075rem;
+        font-size: 0.875rem;
         font-weight: 500;
         text-transform: capitalize;
         transition: background var(--transition);
@@ -366,5 +441,43 @@
         justify-content: space-between;
         font-weight: 600;
         margin-bottom: 0.75rem;
+    }
+
+    /* Exit modal */
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+    }
+
+    .modal-box {
+        width: 100%;
+        max-width: 380px;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .modal-box h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+
+    .modal-sub {
+        font-size: 0.875rem;
+        color: var(--color-text-muted);
+        margin-top: -0.5rem;
+    }
+
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 0.25rem;
     }
 </style>

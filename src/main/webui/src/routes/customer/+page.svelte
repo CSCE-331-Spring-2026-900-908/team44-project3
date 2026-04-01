@@ -1,483 +1,113 @@
 <script lang="ts">
-    import type { MenuItem, CartItem, Customer } from '$lib/types';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
-    import { getCategories, authenticate } from '$lib/api';
-    import { isCustomerMode, setCustomerMode } from '$lib/stores/auth.svelte';
-    import { formatCurrency } from '$lib/utils';
-    import CategoryItems from '$lib/components/CategoryItems.svelte';
-    import ItemCustomization from '$lib/components/ItemCustomization.svelte';
-    import CustomerCheckIn from '$lib/components/CustomerCheckIn.svelte';
-    import PaymentModal from '$lib/components/PaymentModal.svelte';
-    import TransactionComplete from '$lib/components/TransactionComplete.svelte';
+    import { onMount } from 'svelte';
 
-    let categories = $state<string[]>([]);
-    let selectedCategory = $state('');
-    let cart = $state<CartItem[]>([]);
-    let customer = $state<Customer | null>(null);
-
-    let customizeItem = $state<MenuItem | null>(null);
-    let showCustomize = $state(false);
-    let showCheckIn = $state(false);
-    let showPayment = $state(false);
-    let showComplete = $state(false);
-    let showExitModal = $state(false);
-
-    let exitEmail = $state('');
-    let exitPassword = $state('');
-    let exitError = $state('');
-    let exitLoading = $state(false);
-
-    let completedOrderId = $state(0);
-    let completedTip = $state(0);
-    let completedTotal = $state(0);
-
-    let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
-
-    $effect(() => {
-        void loadCategories();
-    });
-
-    async function loadCategories() {
-        try {
-            categories = await getCategories();
-            if (categories.length > 0) selectedCategory = categories[0] ?? '';
-        } catch {
-            categories = [];
-        }
+    function proceed() {
+        goto(resolve('/customer/order'));
     }
 
-    function openCustomization(item: MenuItem) {
-        customizeItem = item;
-        showCustomize = true;
-    }
-
-    function addToCart(cartItem: CartItem) {
-        cart = [...cart, cartItem];
-    }
-
-    function removeFromCart(index: number) {
-        cart = cart.filter((_, i) => i !== index);
-    }
-
-    function handleCustomerConfirm(c: Customer) {
-        customer = c;
-        showCheckIn = false;
-    }
-
-    function handlePaymentComplete(orderId: number, tip: number, total: number) {
-        completedOrderId = orderId;
-        completedTip = tip;
-        completedTotal = total;
-        showPayment = false;
-        showComplete = true;
-    }
-
-    function newSale() {
-        cart = [];
-        customer = null;
-        showComplete = false;
-    }
-
-    function openExitModal() {
-        exitEmail = '';
-        exitPassword = '';
-        exitError = '';
-        showExitModal = true;
-    }
-
-    async function handleExit() {
-        exitError = '';
-        if (!exitEmail || !exitPassword) {
-            exitError = 'Please enter credentials.';
-            return;
-        }
-        exitLoading = true;
-        try {
-            const emp = await authenticate(exitEmail, exitPassword);
-            if (!emp) {
-                exitError = 'Invalid credentials.';
-                return;
-            }
-            setCustomerMode(false);
-            showExitModal = false;
-            await goto(resolve('/'));
-        } catch {
-            exitError = 'Authentication failed. Please try again.';
-        } finally {
-            exitLoading = false;
-        }
-    }
+    
 </script>
 
-<div class="ordering-layout">
-    <header class="ordering-header">
-        <h1>Team 44 Boba</h1>
-        <div class="header-right">
-            <button class="btn-ghost exit-btn" onclick={openExitModal}>Exit Kiosk</button>
-        </div>
-    </header>
 
-    <div class="ordering-body">
-        <aside class="category-sidebar">
-            <h3>Categories</h3>
-            <nav class="category-nav">
-                {#each categories as cat (cat)}
-                    <button
-                        class="cat-btn"
-                        class:active={selectedCategory === cat}
-                        onclick={() => (selectedCategory = cat)}
-                    >
-                        {cat}
-                    </button>
-                {/each}
-            </nav>
-        </aside>
 
-        <main class="menu-area">
-            {#if selectedCategory}
-                <CategoryItems category={selectedCategory} onselect={openCustomization} />
-            {/if}
-        </main>
-
-        <aside class="cart-sidebar">
-            <div class="cart-header">
-                <h3>Current Order</h3>
-                {#if customer}
-                    <span class="badge badge-success">{customer.firstName}</span>
-                {:else}
-                    <button class="btn-ghost" onclick={() => (showCheckIn = true)}>
-                        + Customer
-                    </button>
-                {/if}
-            </div>
-
-            <div class="cart-items">
-                {#if cart.length === 0}
-                    <p class="empty-cart">No items yet</p>
-                {:else}
-                    {#each cart as cartItem, i (i)}
-                        <div class="cart-row">
-                            <div class="cart-item-info">
-                                <span class="cart-item-name">{cartItem.item.name}</span>
-                                <span class="cart-item-details">
-                                    {cartItem.size} &middot; {cartItem.sweetness} &middot;
-                                    {cartItem.iceLevel}
-                                </span>
-                                {#if cartItem.addOns.length > 0}
-                                    <span class="cart-item-details">
-                                        + {cartItem.addOns.map((a) => a.name).join(', ')}
-                                    </span>
-                                {/if}
-                            </div>
-                            <div class="cart-item-actions">
-                                <span>{formatCurrency(cartItem.totalPrice)}</span>
-                                <button class="btn-ghost remove-btn" onclick={() => removeFromCart(i)}>
-                                    &times;
-                                </button>
-                            </div>
-                        </div>
-                    {/each}
-                {/if}
-            </div>
-
-            <div class="cart-footer">
-                <div class="cart-total">
-                    <span>Subtotal</span>
-                    <span>{formatCurrency(subtotal)}</span>
-                </div>
-                <button
-                    class="btn-primary btn-full btn-lg"
-                    disabled={cart.length === 0}
-                    onclick={() => (showPayment = true)}
-                >
-                    Charge {formatCurrency(subtotal)}
-                </button>
-            </div>
-        </aside>
+<div
+    class="splash"
+    on:click={proceed}
+    on:keydown={proceed}
+    tabindex="0"
+>
+    <div class="left">
+        <img src="/boba.png" alt="boba" />
     </div>
+
+    <div class="top-center"
+    >Welcome to our Boba Shop!</div>
+    <div class="center"
+    
+    >Tap anywhere to begin your order</div>
+    <div class="weather">College Station, TX</div>
 </div>
 
-<!-- Exit kiosk modal -->
-{#if showExitModal}
-    <div class="modal-backdrop" onclick={() => (showExitModal = false)} role="none">
-        <div class="modal-box card" onclick={(e) => e.stopPropagation()} role="none">
-            <h2>Exit Kiosk</h2>
-            <p class="modal-sub">Enter employee credentials to exit customer view.</p>
 
-            <div class="form-group">
-                <label for="exit-email">Email</label>
-                <input
-                    id="exit-email"
-                    type="email"
-                    placeholder="Employee email"
-                    bind:value={exitEmail}
-                    autocomplete="username"
-                />
-            </div>
-
-            <div class="form-group">
-                <label for="exit-password">Password</label>
-                <input
-                    id="exit-password"
-                    type="password"
-                    placeholder="Password"
-                    bind:value={exitPassword}
-                    autocomplete="current-password"
-                />
-            </div>
-
-            {#if exitError}
-                <p class="error-text">{exitError}</p>
-            {/if}
-
-            <div class="modal-actions">
-                <button class="btn-ghost" onclick={() => (showExitModal = false)}>Cancel</button>
-                <button class="btn-primary" onclick={handleExit} disabled={exitLoading}>
-                    {exitLoading ? 'Verifying...' : 'Exit'}
-                </button>
-            </div>
-        </div>
-    </div>
-{/if}
-
-<ItemCustomization
-    open={showCustomize}
-    item={customizeItem}
-    onclose={() => (showCustomize = false)}
-    onadd={addToCart}
-/>
-
-<CustomerCheckIn
-    open={showCheckIn}
-    onclose={() => (showCheckIn = false)}
-    onconfirm={handleCustomerConfirm}
-/>
-
-<PaymentModal
-    open={showPayment}
-    {cart}
-    {customer}
-    onclose={() => (showPayment = false)}
-    oncomplete={handlePaymentComplete}
-/>
-
-<TransactionComplete
-    open={showComplete}
-    orderId={completedOrderId}
-    tip={completedTip}
-    total={completedTotal}
-    onnewsale={newSale}
-    onclose={() => (showComplete = false)}
-/>
 
 <style>
-    .ordering-layout {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-    }
 
-    .ordering-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.75rem 1.5rem;
-        background: var(--color-surface);
-        border-bottom: 1px solid var(--color-border);
-        box-shadow: var(--shadow);
-    }
-
-    .ordering-header h1 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--color-primary);
-    }
-
-    .header-right {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-    }
-
-    .exit-btn {
-        font-size: 0.75rem;
-        color: var(--color-text-muted);
-        opacity: 0.6;
-    }
-
-    .exit-btn:hover {
-        opacity: 1;
-    }
-
-    .ordering-body {
-        display: flex;
-        flex: 1;
-        overflow: hidden;
-    }
-
-    .category-sidebar {
-        width: 180px;
-        background: var(--color-surface);
-        border-right: 1px solid var(--color-border);
-        padding: 1rem;
-        overflow-y: auto;
-    }
-
-    .category-sidebar h3 {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--color-text-muted);
-        margin-bottom: 0.75rem;
-    }
-
-    .category-nav {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .cat-btn {
-        text-align: left;
-        padding: 0.5rem 0.75rem;
-        border-radius: var(--radius);
-        background: transparent;
-        font-size: 0.875rem;
-        font-weight: 500;
-        text-transform: capitalize;
-        transition: background var(--transition);
-    }
-
-    .cat-btn:hover {
-        background: var(--color-border);
-    }
-
-    .cat-btn.active {
-        background: var(--color-primary);
-        color: white;
-    }
-
-    .menu-area {
-        flex: 1;
-        padding: 1.25rem;
-        overflow-y: auto;
-    }
-
-    .cart-sidebar {
-        width: 320px;
-        background: var(--color-surface);
-        border-left: 1px solid var(--color-border);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .cart-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1rem 1.25rem;
-        border-bottom: 1px solid var(--color-border);
-    }
-
-    .cart-header h3 {
-        font-size: 1rem;
-        font-weight: 600;
-    }
-
-    .cart-items {
-        flex: 1;
-        overflow-y: auto;
-        padding: 0.75rem 1.25rem;
-    }
-
-    .empty-cart {
-        text-align: center;
-        color: var(--color-text-muted);
-        padding: 2rem 0;
-        font-size: 0.875rem;
-    }
-
-    .cart-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid var(--color-border);
-    }
-
-    .cart-item-name {
-        font-weight: 500;
-        font-size: 0.875rem;
-    }
-
-    .cart-item-details {
-        display: block;
-        font-size: 0.75rem;
-        color: var(--color-text-muted);
-    }
-
-    .cart-item-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-
-    .remove-btn {
-        font-size: 1.25rem;
-        padding: 0 0.25rem;
-        color: var(--color-danger);
-    }
-
-    .cart-footer {
-        padding: 1rem 1.25rem;
-        border-top: 1px solid var(--color-border);
-    }
-
-    .cart-total {
-        display: flex;
-        justify-content: space-between;
-        font-weight: 600;
-        margin-bottom: 0.75rem;
-    }
-
-    /* Exit modal */
-    .modal-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.5);
+    .left {
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 100;
+        position: absolute;
+        left: 10%;
     }
 
-    .modal-box {
-        width: 100%;
-        max-width: 380px;
-        padding: 2rem;
+    .left img {
+        max-width: 80%;
+        max-height: 80%;
+        object-fit: contain;
+    }
+
+    .weather {
+        position: absolute;
+        top: 95%;
+        left: 50%;
+        font-size: 1.2rem;
+        text-align: center;
+    }
+
+    .top-center {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+    }
+
+    .center {
+        position: absolute;
+        text-align: center;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }   
+
+    .splash {
+        height: 100vh;
         display: flex;
-        flex-direction: column;
-        gap: 1rem;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        cursor: pointer;
+        color: white;
+        overflow: hidden;
+        position: relative;
     }
 
-    .modal-box h2 {
-        font-size: 1.25rem;
-        font-weight: 700;
+    /* Background layer */
+    .splash::before {
+        content: '';
+        position: absolute;
+        inset: -50%;
+        z-index: -1;
+
+        background: radial-gradient(circle at 30% 30%, #ff5a5a, transparent 60%),
+                    radial-gradient(circle at 70% 60%, #ffd45a, transparent 60%),
+                    radial-gradient(circle at 50% 80%, #ff8a5a, transparent 60%);
+
+        filter: blur(80px);
+        animation: blobMove 12s ease-in-out infinite alternate;
     }
 
-    .modal-sub {
-        font-size: 0.875rem;
-        color: var(--color-text-muted);
-        margin-top: -0.5rem;
-    }
-
-    .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 0.75rem;
-        margin-top: 0.25rem;
+    @keyframes blobMove {
+        0% {
+            transform: scale(1) translate(0%, 0%);
+        }
+        50% {
+            transform: scale(1.2) translate(10%, -10%);
+        }
+        100% {
+            transform: scale(1) translate(-10%, 10%);
+        }
     }
 </style>

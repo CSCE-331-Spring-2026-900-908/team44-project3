@@ -4,6 +4,8 @@
     import { resolve } from '$app/paths';
     import { page } from '$app/state';
     import { getEmployee, setEmployee, getDisplayName } from '$lib/stores/auth.svelte';
+    import Weather from '$lib/components/Weather.svelte';
+
 
     let { children }: { children: Snippet } = $props();
 
@@ -58,6 +60,7 @@
     </aside>
 
     <main class="manager-main">
+        <Weather />
         {@render children()}
     </main>
 </div>

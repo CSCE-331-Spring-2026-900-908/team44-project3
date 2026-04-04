@@ -59,17 +59,15 @@
   };
 
   let weather = $state<WeatherInfo | null>(null);
-let error = $state<string | null>(null);
-let loading = $state(true);
+  let error = $state<string | null>(null);
+  let loading = $state(true);
 
   async function fetchWeather(): Promise<void> {
     try {
-      // Use ipapi.co (Supports HTTPS for free)
       const geoRes = await fetch('https://ipapi.co/json/');
       if (!geoRes.ok) throw new Error('Location fetch failed.');
       const geo = await geoRes.json();
 
-      // Open-Meteo with modern 'current' parameter
       const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${geo.latitude}&longitude=${geo.longitude}&current=temperature_2m,weather_code&hourly=precipitation&temperature_unit=fahrenheit&timezone=auto`;
 
       const wxRes = await fetch(wxUrl);
@@ -79,10 +77,8 @@ let loading = $state(true);
       const current = wx.current;
       if (!current) throw new Error('No current weather returned.');
 
-      // Map the WMO code to our emoji/condition
       const [condition, emoji] = WMO_CODES[current.weather_code] ?? ['Unknown', '🌡️'];
 
-      // Update our reactive state
       weather = {
         city: geo.city,
         date: new Date().toLocaleDateString('en-US', {
@@ -99,7 +95,6 @@ let loading = $state(true);
       error = e instanceof Error ? e.message : 'Failed to load weather.';
       console.error(e);
     } finally {
-      // This will now trigger the UI to switch from 'Loading' to the widget
       loading = false;
     }
   }
@@ -115,14 +110,31 @@ let loading = $state(true);
   <p class="status error">{error}</p>
 {:else if weather}
   <div class="weather-widget">
-     <div class="header">
-       <div>
-         <p class="city">{weather.city}</p>
-         <p class="date">{weather.date}</p>
-       </div>
-       <span class="emoji">{weather.emoji}</span>
-     </div>
-     </div>
+    <div class="header">
+      <div>
+        <p class="city">{weather.city}</p>
+        <p class="date">{weather.date}</p>
+      </div>
+      <span class="emoji">{weather.emoji}</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="label">Temperature</span>
+        <span class="value">{weather.tempF}°F</span>
+      </div>
+      <div class="stat">
+        <span class="label">Precipitation</span>
+        <span class="value">{weather.precipMm.toFixed(1)} mm</span>
+      </div>
+      <div class="stat">
+        <span class="label">Condition</span>
+        <span class="value">{weather.condition}</span>
+      </div>
+    </div>
+  </div>
 {/if}
 
 <style>

@@ -12,10 +12,28 @@
     let error = $state('');
     let loading = $state(false);
 
-    async function enterCustomer() {
+async function enterCustomer() {
+    error = '';
+    loading = true;
+
+    try {
+        const emp = await authenticate('erica.allen@company.com', '98usTpQyDWcK');
+
+        if (!emp) {
+            error = 'Customer mode login failed.';
+            return;
+        }
+
+        setEmployee(emp);
         setCustomerMode(true);
         await goto(resolve('/customer'));
+    } catch (e) {
+        console.error('Customer mode login failed', e);
+        error = 'Customer mode login failed.';
+    } finally {
+        loading = false;
     }
+}
 
     async function handleLogin() {
         error = '';

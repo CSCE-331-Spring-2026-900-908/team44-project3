@@ -104,47 +104,57 @@
   });
 </script>
 
-{#if loading}
-  <p class="status">Loading weather...</p>
-{:else if error}
-  <p class="status error">{error}</p>
-{:else if weather}
-  <div class="weather-widget">
-    <div class="header">
-      <div>
-        <p class="city">{weather.city}</p>
-        <p class="date">{weather.date}</p>
+<div class="weather-anchor">
+  {#if loading}
+    <p class="status">Loading weather...</p>
+  {:else if error}
+    <p class="status error">{error}</p>
+  {:else if weather}
+    <div class="weather-widget">
+      <div class="header">
+        <div>
+          <p class="city">{weather.city}</p>
+          <p class="date">{weather.date}</p>
+        </div>
+        <span class="emoji">{weather.emoji}</span>
       </div>
-      <span class="emoji">{weather.emoji}</span>
-    </div>
 
-    <div class="divider"></div>
+      <div class="divider"></div>
 
-    <div class="stats">
-      <div class="stat">
-        <span class="label">Temperature</span>
-        <span class="value">{weather.tempF}°F</span>
-      </div>
-      <div class="stat">
-        <span class="label">Precipitation</span>
-        <span class="value">{weather.precipMm.toFixed(1)} mm</span>
-      </div>
-      <div class="stat">
-        <span class="label">Condition</span>
-        <span class="value">{weather.condition}</span>
+      <div class="stats">
+        <div class="stat">
+          <span class="label">Temp</span>
+          <span class="value">{weather.tempF}°F</span>
+        </div>
+        <div class="stat">
+          <span class="label">Precip</span>
+          <span class="value">{weather.precipMm.toFixed(1)} mm</span>
+        </div>
+        <div class="stat">
+          <span class="label">Condition</span>
+          <span class="value">{weather.condition}</span>
+        </div>
       </div>
     </div>
-  </div>
-{/if}
+  {/if}
+</div>
 
 <style>
+  .weather-anchor {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100;
+  }
+
   .weather-widget {
     background: #fff;
     border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 1.25rem 1.5rem;
-    max-width: 420px;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    width: 280px;
     font-family: sans-serif;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 
   .header {
@@ -154,58 +164,58 @@
   }
 
   .city {
-    font-size: 1.1rem;
+    font-size: 0.85rem;
     font-weight: 600;
-    margin: 0 0 2px;
+    margin: 0 0 1px;
     color: #111;
   }
 
   .date {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: #6b7280;
     margin: 0;
   }
 
   .emoji {
-    font-size: 2.4rem;
+    font-size: 1.6rem;
     line-height: 1;
   }
 
   .divider {
     border-top: 1px solid #e5e7eb;
-    margin: 1rem 0;
+    margin: 0.6rem 0;
   }
 
   .stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 6px;
   }
 
   .stat {
     background: #f9fafb;
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    padding: 0.4rem 0.5rem;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
   }
 
   .label {
-    font-size: 0.7rem;
+    font-size: 0.6rem;
     color: #6b7280;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   .value {
-    font-size: 1.1rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: #111;
   }
 
   .status {
-    font-size: 0.9rem;
+    font-size: 0.75rem;
     color: #6b7280;
   }
 

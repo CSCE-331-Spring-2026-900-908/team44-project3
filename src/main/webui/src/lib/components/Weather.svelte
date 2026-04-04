@@ -141,10 +141,9 @@
 
 <style>
   .weather-anchor {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 100;
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem 1rem 0 0;
   }
 
   .weather-widget {

@@ -2,19 +2,21 @@
     import type { CartItem, Customer } from '$lib/types';
     import { submitOrder } from '$lib/api';
     import { getEmployeeId } from '$lib/stores/auth.svelte';
-    import { formatCurrency } from '$lib/utils';
+    import { formatCurrency, TAX_RATE } from '$lib/utils';
     import Modal from './Modal.svelte';
 
     let {
         open,
         cart,
         customer,
+        employeeId = getEmployeeId(),
         onclose,
         oncomplete
     }: {
         open: boolean;
         cart: CartItem[];
         customer: Customer | null;
+        employeeId?: number | null;
         onclose: () => void;
         oncomplete: (orderId: number, tip: number, total: number) => void;
     } = $props();
@@ -32,10 +34,11 @@
     let error = $state('');
 
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
+    let tax = $derived(Math.round(subtotal * TAX_RATE * 100) / 100);
     let tipAmount = $derived(
         customTip ? parseFloat(customTip) || 0 : subtotal * tipPercent
     );
-    let total = $derived(subtotal + tipAmount);
+    let total = $derived(subtotal + tax + tipAmount);
 
     $effect(() => {
         if (open) {
@@ -69,7 +72,7 @@
         error = '';
         try {
             const order = await submitOrder(
-                getEmployeeId(),
+                employeeId ?? null,
                 customer?.customerId ?? null,
                 selectedMethod,
                 tipAmount,
@@ -136,6 +139,10 @@
                 <div class="summary-row">
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Tax (8.25%)</span>
+                    <span>{formatCurrency(tax)}</span>
                 </div>
                 <div class="summary-row">
                     <span>Tip</span>

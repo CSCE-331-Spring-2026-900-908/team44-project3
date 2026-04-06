@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
+    import { fade } from 'svelte/transition';
 
     let {
         open,
@@ -26,7 +27,7 @@
 
 {#if open}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="backdrop" onclick={handleBackdrop} onkeydown={handleKeydown}>
+    <div class="backdrop" onclick={handleBackdrop} onkeydown={handleKeydown} transition:fade={{ duration: 200 }}>
         <div class="modal" class:wide role="dialog" aria-label={title}>
             <div class="modal-header">
                 <h2>{title}</h2>

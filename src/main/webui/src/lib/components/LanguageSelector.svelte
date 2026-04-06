@@ -3,6 +3,7 @@
 
     let open = $state(false);
     let currentLang = $state('en');
+    let selectorEl = $state<HTMLDivElement | null>(null);
 
     const languages = [
         { code: 'en', name: 'English' },
@@ -29,9 +30,19 @@
         }
     });
 
+    $effect(() => {
+        if (!open) return;
+        function handleClick(e: MouseEvent) {
+            if (selectorEl && !selectorEl.contains(e.target as Node)) {
+                open = false;
+            }
+        }
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+    });
+
     function selectLanguage(code: string) {
         if (code === 'en') {
-            // Clear the cookie to revert to English
             document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
             document.cookie = 'googtrans=; path=/; domain=' + location.hostname + '; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         } else {
@@ -46,7 +57,7 @@
     }
 </script>
 
-<div class="lang-selector" class:open>
+<div class="lang-selector" bind:this={selectorEl}>
     <button class="lang-btn" onclick={() => (open = !open)} aria-label="Select language">
         <span class="globe">🌐</span>
         <span class="lang-name">{getCurrentName()}</span>
@@ -67,12 +78,6 @@
         </div>
     {/if}
 </div>
-
-<!-- Close dropdown when clicking outside -->
-{#if open}
-    <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-    <div class="lang-backdrop" onclick={() => (open = false)}></div>
-{/if}
 
 <style>
     .lang-selector {
@@ -145,11 +150,5 @@
     .lang-option.active {
         font-weight: 700;
         color: var(--color-primary, #FF5A5A);
-    }
-
-    .lang-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 9999;
     }
 </style>

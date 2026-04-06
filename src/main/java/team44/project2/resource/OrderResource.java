@@ -25,7 +25,7 @@ public class OrderResource {
     OrderService orderService;
 
     public record OrderRequest(
-            int employeeId,
+            Integer employeeId,
             Integer customerId,
             String paymentMethod,
             BigDecimal tipAmount,

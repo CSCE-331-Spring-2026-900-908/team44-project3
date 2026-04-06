@@ -13,12 +13,17 @@ import type {
     ZReportResult,
     InventoryUsageData
 } from './types';
+import { getToken, setSession, clearSession } from '$lib/stores/auth.svelte';
 
 const BASE = '/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const res = await fetch(`${BASE}${path}`, {
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         ...options
     });
     if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
@@ -30,10 +35,32 @@ export async function authenticate(
     email: string,
     password: string
 ): Promise<Employee | null> {
-    return request<Employee | null>('/auth/login', {
+    const result = await request<{ token: string; employee: Employee } | null>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password })
     });
+    if (result) {
+        setSession(result.token, result.employee);
+        return result.employee;
+    }
+    return null;
+}
+
+export async function logout(): Promise<void> {
+    try {
+        await request<void>('/auth/logout', { method: 'POST' });
+    } finally {
+        clearSession();
+    }
+}
+
+export async function getCurrentUser(): Promise<Employee | null> {
+    try {
+        return await request<Employee>('/auth/me');
+    } catch {
+        clearSession();
+        return null;
+    }
 }
 
 // Employees
@@ -151,9 +178,17 @@ export async function findCustomerByPhone(phone: string): Promise<Customer | nul
     return request<Customer | null>(`/customers/lookup?phone=${encodeURIComponent(phone)}`);
 }
 
+// Customers
+export async function customerCheckin(email: string): Promise<Customer> {
+    return request<Customer>('/customers/checkin', {
+        method: 'POST',
+        body: JSON.stringify({ email })
+    });
+}
+
 // Orders
 export async function submitOrder(
-    employeeId: number,
+    employeeId: number | null,
     customerId: number | null,
     paymentMethod: string,
     tipAmount: number,

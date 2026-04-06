@@ -3,12 +3,15 @@
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { page } from '$app/state';
-    import { getEmployee, setEmployee, getDisplayName } from '$lib/stores/auth.svelte';
+    import { getEmployee, getDisplayName } from '$lib/stores/auth.svelte';
+    import { logout as apiLogout } from '$lib/api';
+    import Weather from '$lib/components/Weather.svelte';
+
 
     let { children }: { children: Snippet } = $props();
 
     $effect(() => {
-        if (!getEmployee()) void goto(resolve('/'));
+        if (!getEmployee()) void goto(resolve('/login'));
     });
 
     const navItems = [
@@ -26,12 +29,12 @@
 
     function logout() {
         if (confirm('Are you sure you want to log out?')) {
-            setEmployee(null);
-            void goto(resolve('/'));
+            void apiLogout().then(() => goto(resolve('/login')));
         }
     }
 </script>
 
+{#if getEmployee()}
 <div class="manager-layout">
     <aside class="manager-sidebar">
         <div class="sidebar-brand">
@@ -58,9 +61,11 @@
     </aside>
 
     <main class="manager-main">
+        <Weather />
         {@render children()}
     </main>
 </div>
+{/if}
 
 <style>
     .manager-layout {

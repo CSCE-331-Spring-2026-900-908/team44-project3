@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { MenuItem, CartItem, SweetnessLevel, IceLevel } from '$lib/types';
     import { getAddOns } from '$lib/api';
+    import { toTitleCase } from '$lib/utils';
     import Modal from './Modal.svelte';
 
     let {
@@ -72,7 +73,7 @@
     }
 </script>
 
-<Modal {open} title={item?.name ?? 'Customize'} {onclose} wide>
+<Modal {open} title={item ? toTitleCase(item.name) : 'Customize'} {onclose} wide>
     <div class="customize-form">
         <section>
             <h4>Size</h4>
@@ -131,7 +132,7 @@
                             )}
                             onclick={() => { toggleAddOn(addon); }}
                         >
-                            {addon.name} (+${addon.basePrice.toFixed(2)})
+                            {toTitleCase(addon.name)} (+${addon.basePrice.toFixed(2)})
                         </button>
                     {/each}
                 </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { MenuItem } from '$lib/types';
     import { getItemsByCategory } from '$lib/api';
+    import { toTitleCase } from '$lib/utils';
 
     let {
         category,
@@ -45,7 +46,7 @@
                     onclick={() => { onselect(item); }}
                     disabled={!item.isAvailable}
                 >
-                    <span class="item-name">{item.name}</span>
+                    <span class="item-name">{toTitleCase(item.name)}</span>
                     <span class="item-price">${item.basePrice.toFixed(2)}</span>
                     {#if !item.isAvailable}
                         <span class="badge badge-danger">Sold Out</span>

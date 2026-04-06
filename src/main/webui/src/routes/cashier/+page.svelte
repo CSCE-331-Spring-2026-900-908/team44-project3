@@ -10,6 +10,7 @@
     import CustomerCheckIn from '$lib/components/CustomerCheckIn.svelte';
     import PaymentModal from '$lib/components/PaymentModal.svelte';
     import TransactionComplete from '$lib/components/TransactionComplete.svelte';
+    
 
     let categories = $state<string[]>([]);
     let selectedCategory = $state('');
@@ -90,6 +91,8 @@
             <button class="btn-ghost" onclick={logout}>Logout</button>
         </div>
     </header>
+
+    
 
     <div class="ordering-body">
         <aside class="category-sidebar">

@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { MenuItem, CartItem, Customer } from '$lib/types';
+    import { onDestroy } from 'svelte';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { getCategories, getItemsByCategory } from '$lib/api';
@@ -20,6 +21,9 @@
         topping: '\u{1F369}'
     };
 
+    const IDLE_TIMEOUT = 30;
+    const IDLE_WARNING = 10;
+
     let categories = $state<string[]>([]);
     let selectedCategory = $state('');
     let items = $state<MenuItem[]>([]);
@@ -32,6 +36,8 @@
     let showCheckIn = $state(false);
     let showPayment = $state(false);
     let showComplete = $state(false);
+    let showConfirmReset = $state(false);
+    let showConfirmExit = $state(false);
 
     let completedOrderId = $state(0);
     let completedTip = $state(0);
@@ -39,6 +45,56 @@
 
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
     let tax = $derived(Math.round(subtotal * TAX_RATE * 100) / 100);
+
+    let idleSeconds = $state(0);
+    let showIdleWarning = $state(false);
+    let idleCountdown = $state(IDLE_WARNING);
+    let idleTimer: ReturnType<typeof setInterval> | null = null;
+
+    function resetIdle() {
+        idleSeconds = 0;
+        if (showIdleWarning) {
+            showIdleWarning = false;
+            idleCountdown = IDLE_WARNING;
+        }
+    }
+
+    function startIdleTimer() {
+        clearIdleTimer();
+        idleTimer = setInterval(() => {
+            idleSeconds += 1;
+            if (showIdleWarning) {
+                idleCountdown -= 1;
+                if (idleCountdown <= 0) {
+                    exitToHome();
+                }
+            } else if (idleSeconds >= IDLE_TIMEOUT) {
+                showIdleWarning = true;
+                idleCountdown = IDLE_WARNING;
+            }
+        }, 1000);
+    }
+
+    function clearIdleTimer() {
+        if (idleTimer) {
+            clearInterval(idleTimer);
+            idleTimer = null;
+        }
+    }
+
+    function exitToHome() {
+        clearIdleTimer();
+        clearCustomer();
+        void goto(resolve('/'));
+    }
+
+    $effect(() => {
+        startIdleTimer();
+    });
+
+    onDestroy(() => {
+        clearIdleTimer();
+    });
 
     $effect(() => {
         void loadCategories();
@@ -95,14 +151,21 @@
     }
 
     function newSale() {
-        cart = [];
-        customer = null;
+        clearIdleTimer();
+        clearCustomer();
         showComplete = false;
+        void goto(resolve('/'));
     }
 
     function startOver() {
-        clearCustomer();
-        void goto(resolve('/'));
+        cart = [];
+        customer = getCustomer();
+        customizeItem = null;
+        showCustomize = false;
+        showCheckIn = false;
+        showPayment = false;
+        showComplete = false;
+        resetIdle();
     }
 
     function formatCategory(cat: string): string {
@@ -110,7 +173,8 @@
     }
 </script>
 
-<div class="order-page">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="order-page" onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
     <!-- Header -->
     <header class="order-header">
         <div class="header-left">
@@ -118,13 +182,15 @@
         </div>
         <div class="header-right">
             {#if customer}
-                <span class="welcome-text">Hi, {customer.email}</span>
+                <span class="welcome-text"
+                    >Hi, {customer.firstName && customer.lastName
+                        ? toTitleCase(`${customer.firstName} ${customer.lastName}`)
+                        : customer.email}</span
+                >
             {:else}
-                <button class="header-btn" onclick={() => (showCheckIn = true)}>
-                    Sign In
-                </button>
+                <button class="header-btn" onclick={() => (showCheckIn = true)}> Sign In </button>
             {/if}
-            <button class="header-btn subtle" onclick={startOver}>Start Over</button>
+            <button class="header-btn exit" onclick={() => (showConfirmExit = true)}>Exit</button>
         </div>
     </header>
 
@@ -170,7 +236,9 @@
                             onclick={() => openCustomization(item)}
                             disabled={!item.isAvailable}
                         >
-                            <div class="item-icon">{categoryEmojis[item.category] ?? '\u{1F964}'}</div>
+                            <div class="item-icon">
+                                {categoryEmojis[item.category] ?? '\u{1F964}'}
+                            </div>
                             <div class="item-info">
                                 <span class="item-name">{toTitleCase(item.name)}</span>
                             </div>
@@ -198,20 +266,29 @@
                 {:else}
                     {#each cart as cartItem, i (i)}
                         <div class="cart-card">
-                            <div class="cart-card-icon">{categoryEmojis[cartItem.item.category] ?? '\u{1F964}'}</div>
+                            <div class="cart-card-icon">
+                                {categoryEmojis[cartItem.item.category] ?? '\u{1F964}'}
+                            </div>
                             <div class="cart-card-info">
-                                <span class="cart-card-name">{toTitleCase(cartItem.item.name)}</span>
+                                <span class="cart-card-name">{toTitleCase(cartItem.item.name)}</span
+                                >
                                 <span class="cart-card-details">
                                     {cartItem.size} &middot; {cartItem.sweetness} &middot; {cartItem.iceLevel}
                                 </span>
                                 {#if cartItem.addOns.length > 0}
                                     <span class="cart-card-details">
-                                        + {cartItem.addOns.map((a) => toTitleCase(a.name)).join(', ')}
+                                        + {cartItem.addOns
+                                            .map((a) => toTitleCase(a.name))
+                                            .join(', ')}
                                     </span>
                                 {/if}
-                                <span class="cart-card-price">{formatCurrency(cartItem.totalPrice)}</span>
+                                <span class="cart-card-price"
+                                    >{formatCurrency(cartItem.totalPrice)}</span
+                                >
                             </div>
-                            <button class="cart-remove" onclick={() => removeFromCart(i)}>&times;</button>
+                            <button class="cart-remove" onclick={() => removeFromCart(i)}
+                                >&times;</button
+                            >
                         </div>
                     {/each}
                 {/if}
@@ -237,10 +314,78 @@
                 >
                     Pay {formatCurrency(subtotal + tax)}
                 </button>
+                {#if cart.length > 0}
+                    <button class="reset-btn" onclick={() => (showConfirmReset = true)}
+                        >Reset Cart</button
+                    >
+                {/if}
             </div>
         </aside>
     </div>
 </div>
+
+{#if showConfirmReset}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+        class="idle-overlay"
+        onclick={() => (showConfirmReset = false)}
+        onkeydown={() => (showConfirmReset = false)}
+    >
+        <div
+            class="idle-card card"
+            onclick={(e) => e.stopPropagation()}
+            onkeydown={(e) => e.stopPropagation()}
+            role="none"
+        >
+            <p class="idle-title">Reset Cart?</p>
+            <p class="idle-text">This will remove all items from your cart.</p>
+            <div class="confirm-actions">
+                <button class="btn-ghost" onclick={() => (showConfirmReset = false)}>Cancel</button>
+                <button
+                    class="btn-primary"
+                    onclick={() => {
+                        showConfirmReset = false;
+                        startOver();
+                    }}>Reset</button
+                >
+            </div>
+        </div>
+    </div>
+{/if}
+
+{#if showConfirmExit}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+        class="idle-overlay"
+        onclick={() => (showConfirmExit = false)}
+        onkeydown={() => (showConfirmExit = false)}
+    >
+        <div
+            class="idle-card card"
+            onclick={(e) => e.stopPropagation()}
+            onkeydown={(e) => e.stopPropagation()}
+            role="none"
+        >
+            <p class="idle-title">Leave ordering?</p>
+            <p class="idle-text">Your cart and session will be cleared.</p>
+            <div class="confirm-actions">
+                <button class="btn-ghost" onclick={() => (showConfirmExit = false)}>Cancel</button>
+                <button class="confirm-exit-btn" onclick={exitToHome}>Exit</button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+{#if showIdleWarning}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div class="idle-overlay" onclick={resetIdle} onkeydown={resetIdle}>
+        <div class="idle-card card">
+            <p class="idle-title">Still there?</p>
+            <p class="idle-text">Returning to home in {idleCountdown}s...</p>
+            <button class="btn-primary btn-lg" onclick={resetIdle}>I'm still here</button>
+        </div>
+    </div>
+{/if}
 
 <ItemCustomization
     open={showCustomize}
@@ -314,9 +459,9 @@
     .header-btn {
         padding: 0.4rem 1rem;
         border-radius: 20px;
-        border: 2px solid #d4712a;
+        border: 2px solid #43a047;
         background: transparent;
-        color: #d4712a;
+        color: #43a047;
         font-weight: 600;
         font-size: 0.85rem;
         cursor: pointer;
@@ -324,19 +469,20 @@
     }
 
     .header-btn:hover {
-        background: #d4712a;
+        background: #43a047;
         color: white;
     }
 
-    .header-btn.subtle {
-        border-color: #ccc;
-        color: #999;
+    .header-btn.exit {
+        border-color: transparent;
+        color: #e74c3c;
+        font-size: 0.8rem;
     }
 
-    .header-btn.subtle:hover {
-        border-color: #999;
-        background: #f0f0f0;
-        color: #666;
+    .header-btn.exit:hover {
+        border-color: #e74c3c;
+        background: #fdf0ef;
+        color: #c0392b;
     }
 
     /* ── Body ── */
@@ -402,7 +548,7 @@
         background: white;
         cursor: pointer;
         transition: all 0.15s;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
 
     .cat-pill:hover {
@@ -461,14 +607,16 @@
         align-items: center;
         gap: 0.5rem;
         cursor: pointer;
-        transition: transform 0.15s, box-shadow 0.15s;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        transition:
+            transform 0.15s,
+            box-shadow 0.15s;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
         text-align: center;
     }
 
     .item-card:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
     }
 
     .item-card.unavailable {
@@ -621,7 +769,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.15s, color 0.15s;
+        transition:
+            background 0.15s,
+            color 0.15s;
     }
 
     .cart-remove:hover {
@@ -629,7 +779,6 @@
         color: white;
     }
 
-    /* ── Cart Summary ── */
     .cart-summary {
         border-top: 1px solid #ece4d8;
         padding-top: 1rem;
@@ -669,7 +818,9 @@
         font-size: 1.15rem;
         font-weight: 700;
         cursor: pointer;
-        transition: opacity 0.15s, transform 0.1s;
+        transition:
+            opacity 0.15s,
+            transform 0.1s;
     }
 
     .pay-btn:hover:not(:disabled) {
@@ -680,5 +831,77 @@
     .pay-btn:disabled {
         opacity: 0.4;
         cursor: not-allowed;
+    }
+
+    .reset-btn {
+        width: 100%;
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+        border: none;
+        border-radius: 10px;
+        background: transparent;
+        color: #999;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+            color 0.15s,
+            background 0.15s;
+    }
+
+    .reset-btn:hover {
+        color: #666;
+        background: #f0ebe4;
+    }
+
+    .idle-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+    }
+
+    .idle-card {
+        text-align: center;
+        padding: 2.5rem 3rem;
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .idle-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #333;
+    }
+
+    .idle-text {
+        font-size: 1rem;
+        color: #999;
+    }
+
+    .confirm-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .confirm-exit-btn {
+        padding: 0.5rem 1.5rem;
+        border: none;
+        border-radius: var(--radius);
+        background: #e74c3c;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .confirm-exit-btn:hover {
+        background: #c0392b;
     }
 </style>

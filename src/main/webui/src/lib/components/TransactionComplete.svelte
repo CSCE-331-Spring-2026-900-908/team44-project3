@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onDestroy } from 'svelte';
     import { formatCurrency } from '$lib/utils';
     import Modal from './Modal.svelte';
 
@@ -17,12 +18,71 @@
         onnewsale: () => void;
         onclose: () => void;
     } = $props();
+
+    type ReceiptStatus = 'idle' | 'printed' | 'emailed';
+
+    let receiptStatus = $state<ReceiptStatus>('idle');
+    let countdown = $state(10);
+    let dismissTimer: ReturnType<typeof setInterval> | null = null;
+
+    $effect(() => {
+        if (open) {
+            receiptStatus = 'idle';
+            startCountdown();
+        } else {
+            clearCountdown();
+        }
+    });
+
+    onDestroy(() => {
+        clearCountdown();
+    });
+
+    function startCountdown() {
+        clearCountdown();
+        countdown = 10;
+        dismissTimer = setInterval(() => {
+            countdown -= 1;
+            if (countdown <= 0) {
+                clearCountdown();
+                onnewsale();
+            }
+        }, 1000);
+    }
+
+    function clearCountdown() {
+        if (dismissTimer) {
+            clearInterval(dismissTimer);
+            dismissTimer = null;
+        }
+    }
+
+    function handlePrint() {
+        receiptStatus = 'printed';
+        startCountdown();
+    }
+
+    function handleEmail() {
+        receiptStatus = 'emailed';
+        startCountdown();
+    }
+
+    function handleNoReceipt() {
+        clearCountdown();
+        onnewsale();
+    }
+
+    function handleDone() {
+        clearCountdown();
+        onnewsale();
+    }
 </script>
 
-<Modal {open} title="Transaction Complete" {onclose}>
+<Modal {open} title="Thank You!" {onclose}>
     <div class="complete-content">
         <div class="checkmark">&#10003;</div>
 
+        <p class="thank-you">Thank you for your purchase!</p>
         <p class="order-id">Order #{orderId}</p>
 
         <div class="summary card">
@@ -40,13 +100,23 @@
             </div>
         </div>
 
-        <div class="receipt-options">
-            <button class="btn-secondary">Print Receipt</button>
-            <button class="btn-secondary">Email Receipt</button>
-            <button class="btn-ghost">No Receipt</button>
-        </div>
-
-        <button class="btn-primary btn-full btn-lg" onclick={onnewsale}>New Sale</button>
+        {#if receiptStatus === 'idle'}
+            <p class="receipt-label">Would you like a receipt?</p>
+            <div class="receipt-options">
+                <button class="btn-secondary" onclick={handlePrint}>Print Receipt</button>
+                <button class="btn-secondary" onclick={handleEmail}>Email Receipt</button>
+                <button class="btn-ghost" onclick={handleNoReceipt}>No Receipt</button>
+            </div>
+            <p class="countdown-text">Closing in {countdown}s...</p>
+        {:else}
+            <div class="receipt-confirmed">
+                <span class="receipt-badge">
+                    &#10003; Receipt {receiptStatus === 'printed' ? 'Printed' : 'Emailed'}
+                </span>
+            </div>
+            <button class="btn-primary btn-full btn-lg" onclick={handleDone}>Done</button>
+            <p class="countdown-text">Closing in {countdown}s...</p>
+        {/if}
     </div>
 </Modal>
 
@@ -69,6 +139,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+
+    .thank-you {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--color-success);
     }
 
     .order-id {
@@ -95,8 +171,33 @@
         padding-top: 0.5rem;
     }
 
+    .receipt-label {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+    }
+
     .receipt-options {
         display: flex;
         gap: 0.5rem;
+    }
+
+    .countdown-text {
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+        opacity: 0.7;
+    }
+
+    .receipt-confirmed {
+        padding: 0.5rem 0;
+    }
+
+    .receipt-badge {
+        display: inline-block;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        background: #e8f5e9;
+        color: var(--color-success);
+        font-weight: 600;
+        font-size: 0.9rem;
     }
 </style>

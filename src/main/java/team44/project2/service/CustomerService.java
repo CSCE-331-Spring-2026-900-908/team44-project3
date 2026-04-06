@@ -17,11 +17,24 @@ import java.sql.ResultSet;
  */
 @ApplicationScoped
 public class CustomerService {
-    //sql query to find a customer by their phone number for customer lookup purposes during order creation and management
     private static final String FIND_BY_PHONE = """
             SELECT *
             FROM customers
             WHERE phone = ?
+            """;
+
+    private static final String FIND_BY_EMAIL = """
+            SELECT *
+            FROM customers
+            WHERE email = ?
+            ORDER BY customer_id DESC
+            LIMIT 1
+            """;
+
+    private static final String INSERT_CUSTOMER_BY_EMAIL = """
+            INSERT INTO customers (first_name, last_name, phone, email, reward_points, join_date)
+            VALUES ('', '', NULL, ?, 0, CURRENT_DATE)
+            RETURNING *
             """;
 
     @Inject
@@ -46,6 +59,43 @@ public class CustomerService {
             }
         } catch (Exception e) {
             Log.error("Failed to find customer by phone", e);
+        }
+
+        return null;
+    }
+
+    public Customer findByEmail(String email) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(FIND_BY_EMAIL)) {
+
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return mapCustomer(rs);
+            }
+        } catch (Exception e) {
+            Log.error("Failed to find customer by email", e);
+        }
+
+        return null;
+    }
+
+    public Customer findOrCreateByEmail(String email) {
+        Customer existing = findByEmail(email);
+        if (existing != null) return existing;
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(INSERT_CUSTOMER_BY_EMAIL)) {
+
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return mapCustomer(rs);
+            }
+        } catch (Exception e) {
+            Log.error("Failed to create customer by email", e);
         }
 
         return null;

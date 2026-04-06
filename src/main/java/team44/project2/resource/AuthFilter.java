@@ -51,6 +51,7 @@ public class AuthFilter implements ContainerRequestFilter {
 
         if (path.startsWith("api/menu/")) return true;
         if (path.equals("api/customers/lookup")) return true;
+        if (path.equals("api/customers/checkin") && "POST".equals(method)) return true;
         if (path.equals("api/orders") && "POST".equals(method)) return true;
 
         return false;

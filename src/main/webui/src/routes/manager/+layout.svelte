@@ -11,7 +11,7 @@
     let { children }: { children: Snippet } = $props();
 
     $effect(() => {
-        if (!getEmployee()) void goto(resolve('/'));
+        if (!getEmployee()) void goto(resolve('/login'));
     });
 
     const navItems = [
@@ -29,7 +29,7 @@
 
     function logout() {
         if (confirm('Are you sure you want to log out?')) {
-            void apiLogout().then(() => goto(resolve('/')));
+            void apiLogout().then(() => goto(resolve('/login')));
         }
     }
 </script>

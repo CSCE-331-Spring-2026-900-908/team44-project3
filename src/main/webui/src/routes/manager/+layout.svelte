@@ -3,7 +3,8 @@
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { page } from '$app/state';
-    import { getEmployee, setEmployee, getDisplayName } from '$lib/stores/auth.svelte';
+    import { getEmployee, getDisplayName } from '$lib/stores/auth.svelte';
+    import { logout as apiLogout } from '$lib/api';
     import Weather from '$lib/components/Weather.svelte';
 
 
@@ -28,12 +29,12 @@
 
     function logout() {
         if (confirm('Are you sure you want to log out?')) {
-            setEmployee(null);
-            void goto(resolve('/'));
+            void apiLogout().then(() => goto(resolve('/')));
         }
     }
 </script>
 
+{#if getEmployee()}
 <div class="manager-layout">
     <aside class="manager-sidebar">
         <div class="sidebar-brand">
@@ -64,6 +65,7 @@
         {@render children()}
     </main>
 </div>
+{/if}
 
 <style>
     .manager-layout {

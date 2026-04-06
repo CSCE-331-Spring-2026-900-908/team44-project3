@@ -1,36 +1,50 @@
 <script lang="ts">
     import type { Customer } from '$lib/types';
-    import { findCustomerByPhone } from '$lib/api';
+    import { findCustomerByPhone, customerCheckin } from '$lib/api';
     import Modal from './Modal.svelte';
 
     let {
         open,
+        mode = 'phone',
         onclose,
         onconfirm
     }: {
         open: boolean;
+        mode?: 'phone' | 'email';
         onclose: () => void;
         onconfirm: (customer: Customer) => void;
     } = $props();
 
-    let phone = $state('');
+    let input = $state('');
     let customer = $state<Customer | null>(null);
     let error = $state('');
     let searching = $state(false);
+    let inputEl = $state<HTMLInputElement | null>(null);
 
     async function lookup() {
         error = '';
         customer = null;
-        if (!phone.trim()) {
-            error = 'Please enter a phone number.';
+
+        if (!input.trim()) {
+            error = mode === 'phone' ? 'Please enter a phone number.' : 'Please enter your email.';
             return;
         }
+
+        if (mode === 'email' && inputEl && !inputEl.validity.valid) {
+            error = 'Please enter a valid email address.';
+            return;
+        }
+
         searching = true;
         try {
-            customer = await findCustomerByPhone(phone.trim());
-            if (!customer) error = 'Customer not found.';
+            if (mode === 'phone') {
+                customer = await findCustomerByPhone(input.trim());
+                if (!customer) error = 'Customer not found.';
+            } else {
+                customer = await customerCheckin(input.trim());
+            }
         } catch {
-            error = 'Lookup failed.';
+            error = mode === 'phone' ? 'Lookup failed.' : 'Check-in failed. Please try again.';
         } finally {
             searching = false;
         }
@@ -49,23 +63,34 @@
     }
 
     function reset() {
-        phone = '';
+        input = '';
         customer = null;
         error = '';
     }
 </script>
 
-<Modal {open} title="Customer Check-In" onclose={cancel}>
+<Modal {open} title={mode === 'phone' ? 'Customer Check-In' : 'Sign In'} onclose={cancel}>
     <div class="checkin-form">
         <div class="search-row">
-            <input
-                type="tel"
-                placeholder="Phone number"
-                bind:value={phone}
-                onkeydown={(e) => { if (e.key === 'Enter') void lookup(); }}
-            />
+            {#if mode === 'phone'}
+                <input
+                    type="tel"
+                    placeholder="Phone number"
+                    bind:value={input}
+                    onkeydown={(e) => { if (e.key === 'Enter') void lookup(); }}
+                />
+            {:else}
+                <input
+                    bind:this={inputEl}
+                    type="email"
+                    pattern=".+@.+\..+"
+                    placeholder="Enter your email"
+                    bind:value={input}
+                    onkeydown={(e) => { if (e.key === 'Enter') void lookup(); }}
+                />
+            {/if}
             <button class="btn-primary" onclick={lookup} disabled={searching}>
-                {searching ? 'Searching...' : 'Look Up'}
+                {searching ? 'Searching...' : mode === 'phone' ? 'Look Up' : 'Sign In'}
             </button>
         </div>
 
@@ -75,8 +100,15 @@
 
         {#if customer}
             <div class="customer-info card">
-                <p><strong>Name:</strong> {customer.firstName} {customer.lastName}</p>
-                <p><strong>Phone:</strong> {customer.phone}</p>
+                {#if customer.firstName || customer.lastName}
+                    <p><strong>Name:</strong> {customer.firstName} {customer.lastName}</p>
+                {/if}
+                {#if customer.phone}
+                    <p><strong>Phone:</strong> {customer.phone}</p>
+                {/if}
+                {#if customer.email}
+                    <p><strong>Email:</strong> {customer.email}</p>
+                {/if}
                 <p><strong>Reward Points:</strong> {customer.rewardPoints}</p>
             </div>
         {/if}

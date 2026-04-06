@@ -5,7 +5,7 @@
     import { getCategories } from '$lib/api';
     import { getEmployee, getDisplayName } from '$lib/stores/auth.svelte';
     import { logout as apiLogout } from '$lib/api';
-    import { formatCurrency } from '$lib/utils';
+    import { formatCurrency, TAX_RATE, toTitleCase } from '$lib/utils';
     import CategoryItems from '$lib/components/CategoryItems.svelte';
     import ItemCustomization from '$lib/components/ItemCustomization.svelte';
     import CustomerCheckIn from '$lib/components/CustomerCheckIn.svelte';
@@ -29,10 +29,11 @@
     let completedTotal = $state(0);
 
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
+    let tax = $derived(Math.round(subtotal * TAX_RATE * 100) / 100);
 
     $effect(() => {
         if (!getEmployee()) {
-            void goto(resolve('/'));
+            void goto(resolve('/login'));
         }
         void loadCategories();
     });
@@ -79,7 +80,7 @@
     }
 
     function logout() {
-        void apiLogout().then(() => goto(resolve('/')));
+        void apiLogout().then(() => goto(resolve('/login')));
     }
 </script>
 
@@ -136,14 +137,14 @@
                     {#each cart as cartItem, i (i)}
                         <div class="cart-row">
                             <div class="cart-item-info">
-                                <span class="cart-item-name">{cartItem.item.name}</span>
+                                <span class="cart-item-name">{toTitleCase(cartItem.item.name)}</span>
                                 <span class="cart-item-details">
                                     {cartItem.size} &middot; {cartItem.sweetness} &middot;
                                     {cartItem.iceLevel}
                                 </span>
                                 {#if cartItem.addOns.length > 0}
                                     <span class="cart-item-details">
-                                        + {cartItem.addOns.map((a) => a.name).join(', ')}
+                                        + {cartItem.addOns.map((a) => toTitleCase(a.name)).join(', ')}
                                     </span>
                                 {/if}
                             </div>
@@ -163,12 +164,20 @@
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
                 </div>
+                <div class="cart-tax">
+                    <span>Tax (8.25%)</span>
+                    <span>{formatCurrency(tax)}</span>
+                </div>
+                <div class="cart-total cart-grand-total">
+                    <span>Total</span>
+                    <span>{formatCurrency(subtotal + tax)}</span>
+                </div>
                 <button
                     class="btn-primary btn-full btn-lg"
                     disabled={cart.length === 0}
                     onclick={() => (showPayment = true)}
                 >
-                    Charge {formatCurrency(subtotal)}
+                    Charge {formatCurrency(subtotal + tax)}
                 </button>
             </div>
         </aside>
@@ -370,6 +379,22 @@
         display: flex;
         justify-content: space-between;
         font-weight: 600;
+        margin-bottom: 0.35rem;
+    }
+
+    .cart-tax {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+        margin-bottom: 0.35rem;
+    }
+
+    .cart-grand-total {
+        border-top: 1px solid var(--color-border);
+        padding-top: 0.5rem;
+        margin-top: 0.25rem;
         margin-bottom: 0.75rem;
+        font-size: 1.05rem;
     }
 </style>

@@ -2,6 +2,9 @@ package team44.project2.resource;
 
 import io.smallrye.common.annotation.Blocking;
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.Context;
@@ -23,12 +26,12 @@ public class AuthResource {
     @Inject
     SessionStore sessionStore;
 
-    public record LoginRequest(String email, String password) {}
+    public record LoginRequest(@Email(regexp = ".+@.+\\..+") @NotBlank String email, @NotBlank String password) {}
     public record LoginResponse(String token, Employee employee) {}
 
     @POST
     @Path("/login")
-    public Response login(LoginRequest req) {
+    public Response login(@Valid LoginRequest req) {
         Employee emp = authService.authenticate(req.email(), req.password());
         if (emp == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();

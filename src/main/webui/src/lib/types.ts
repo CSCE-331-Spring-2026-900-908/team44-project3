@@ -40,6 +40,7 @@ export interface Customer {
     firstName: string;
     lastName: string;
     phone: string;
+    email: string;
     rewardPoints: number;
 }
 
@@ -54,7 +55,7 @@ export interface CartItem {
 
 export interface Order {
     orderId: number;
-    employeeId: number;
+    employeeId: number | null;
     customerId: number | null;
     paymentMethod: string;
     tipAmount: number;

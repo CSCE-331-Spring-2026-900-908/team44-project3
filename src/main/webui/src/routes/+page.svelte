@@ -1,8 +1,8 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
-    import { authenticate } from '$lib/api';
-    import { setEmployee, isManager, setCustomerMode } from '$lib/stores/auth.svelte';
+    import { authenticate, getCurrentUser } from '$lib/api';
+    import { isManager, setCustomerMode, restoreSession } from '$lib/stores/auth.svelte';
 
     type Step = 'select' | 'employee' | 'manager';
     let step = $state<Step>('select');
@@ -11,6 +11,18 @@
     let password = $state('');
     let error = $state('');
     let loading = $state(false);
+
+    $effect(() => {
+        const saved = restoreSession();
+        if (saved) {
+            getCurrentUser().then((emp) => {
+                if (emp) {
+                    const dest = emp.role === 'manager' ? '/manager' : '/cashier';
+                    void goto(resolve(dest));
+                }
+            });
+        }
+    });
 
     async function enterCustomer() {
         setCustomerMode(true);
@@ -30,11 +42,9 @@
                 error = 'Invalid email or password.';
                 return;
             }
-            setEmployee(emp);
             if (step === 'manager') {
                 if (!isManager()) {
                     error = 'This account does not have manager access.';
-                    setEmployee(null);
                     return;
                 }
                 await goto(resolve('/manager'));

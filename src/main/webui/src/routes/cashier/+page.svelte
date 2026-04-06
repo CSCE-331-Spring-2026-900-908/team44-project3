@@ -3,7 +3,8 @@
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { getCategories } from '$lib/api';
-    import { getEmployee, setEmployee, getDisplayName } from '$lib/stores/auth.svelte';
+    import { getEmployee, getDisplayName } from '$lib/stores/auth.svelte';
+    import { logout as apiLogout } from '$lib/api';
     import { formatCurrency } from '$lib/utils';
     import CategoryItems from '$lib/components/CategoryItems.svelte';
     import ItemCustomization from '$lib/components/ItemCustomization.svelte';
@@ -78,11 +79,11 @@
     }
 
     function logout() {
-        setEmployee(null);
-        void goto(resolve('/'));
+        void apiLogout().then(() => goto(resolve('/')));
     }
 </script>
 
+{#if getEmployee()}
 <div class="ordering-layout">
     <header class="ordering-header">
         <h1>Team 44 Boba POS</h1>
@@ -203,6 +204,7 @@
     onnewsale={newSale}
     onclose={() => (showComplete = false)}
 />
+{/if}
 
 <style>
     .ordering-layout {

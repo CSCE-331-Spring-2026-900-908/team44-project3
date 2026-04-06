@@ -10,6 +10,7 @@
     import CustomerCheckIn from '$lib/components/CustomerCheckIn.svelte';
     import PaymentModal from '$lib/components/PaymentModal.svelte';
     import TransactionComplete from '$lib/components/TransactionComplete.svelte';
+    import LanguageSelector from '$lib/components/LanguageSelector.svelte';
 
     const categoryEmojis: Record<string, string> = {
         milk_tea: '\u{1F95B}',
@@ -181,6 +182,7 @@
             <h1>Team 44 Boba</h1>
         </div>
         <div class="header-right">
+            <LanguageSelector />
             {#if customer}
                 <span class="welcome-text"
                     >Hi, {customer.firstName && customer.lastName

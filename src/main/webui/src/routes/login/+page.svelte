@@ -3,6 +3,7 @@
     import { resolve } from '$app/paths';
     import { authenticate, getCurrentUser } from '$lib/api';
     import { isManager, restoreSession } from '$lib/stores/auth.svelte';
+    import LanguageSelector from '$lib/components/LanguageSelector.svelte';
 
     type Step = 'select' | 'employee' | 'manager';
     let step = $state<Step>('select');
@@ -70,6 +71,9 @@
     <div class="login-card card">
         <div class="login-header">
             <h1>Team 44 Boba POS</h1>
+            <div class="lang-row">
+                <LanguageSelector />
+            </div>
         </div>
 
         {#if step === 'select'}
@@ -152,6 +156,12 @@
     .login-header {
         text-align: center;
         margin-bottom: 2rem;
+    }
+
+    .lang-row {
+        display: flex;
+        justify-content: center;
+        margin-top: 0.75rem;
     }
 
     .login-header h1 {

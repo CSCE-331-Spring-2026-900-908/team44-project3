@@ -6,6 +6,7 @@
     import { getEmployee, getDisplayName } from '$lib/stores/auth.svelte';
     import { logout as apiLogout } from '$lib/api';
     import Weather from '$lib/components/Weather.svelte';
+    import LanguageSelector from '$lib/components/LanguageSelector.svelte';
 
 
     let { children }: { children: Snippet } = $props();
@@ -56,6 +57,9 @@
 
         <div class="sidebar-footer">
             <span class="user-name">{getDisplayName()}</span>
+            <div class="lang-row">
+                <LanguageSelector />
+            </div>
             <button class="btn-ghost" onclick={logout}>Logout</button>
         </div>
     </aside>
@@ -139,6 +143,34 @@
     .user-name {
         font-size: 0.8rem;
         color: rgba(255, 255, 255, 0.6);
+    }
+
+    .lang-row {
+        display: flex;
+    }
+
+    .lang-row :global(.lang-btn) {
+        color: rgba(255, 255, 255, 0.7);
+        border-color: rgba(255, 255, 255, 0.2);
+        background: transparent;
+    }
+
+    .lang-row :global(.lang-btn:hover) {
+        color: white;
+        border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .lang-row :global(.lang-dropdown) {
+        background: #3d2f25;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .lang-row :global(.lang-option) {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .lang-row :global(.lang-option:hover) {
+        background: rgba(255, 255, 255, 0.08);
     }
 
     .sidebar-footer button {

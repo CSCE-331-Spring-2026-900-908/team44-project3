@@ -1,8 +1,8 @@
-import type { Employee } from '$lib/types';
+import type { Employee, Customer } from '$lib/types';
 
 let currentEmployee = $state<Employee | null>(null);
 let sessionToken = $state<string | null>(null);
-let customerMode = $state(false);
+let currentCustomer = $state<Customer | null>(null);
 
 export function getEmployee(): Employee | null {
     return currentEmployee;
@@ -61,10 +61,30 @@ export function getDisplayName(): string {
     return `${cap(currentEmployee.firstName)} ${cap(currentEmployee.lastName)}`;
 }
 
-export function isCustomerMode(): boolean {
-    return customerMode;
+export function getCustomer(): Customer | null {
+    return currentCustomer;
 }
 
-export function setCustomerMode(val: boolean): void {
-    customerMode = val;
+export function setCustomer(customer: Customer): void {
+    currentCustomer = customer;
+    sessionStorage.setItem('auth_customer', JSON.stringify(customer));
+}
+
+export function clearCustomer(): void {
+    currentCustomer = null;
+    sessionStorage.removeItem('auth_customer');
+}
+
+export function restoreCustomer(): Customer | null {
+    const json = sessionStorage.getItem('auth_customer');
+    if (!json) return null;
+
+    try {
+        const customer = JSON.parse(json) as Customer;
+        currentCustomer = customer;
+        return customer;
+    } catch {
+        clearCustomer();
+        return null;
+    }
 }

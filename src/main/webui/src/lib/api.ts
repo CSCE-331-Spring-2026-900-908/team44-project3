@@ -178,9 +178,17 @@ export async function findCustomerByPhone(phone: string): Promise<Customer | nul
     return request<Customer | null>(`/customers/lookup?phone=${encodeURIComponent(phone)}`);
 }
 
+// Customers
+export async function customerCheckin(email: string): Promise<Customer> {
+    return request<Customer>('/customers/checkin', {
+        method: 'POST',
+        body: JSON.stringify({ email })
+    });
+}
+
 // Orders
 export async function submitOrder(
-    employeeId: number,
+    employeeId: number | null,
     customerId: number | null,
     paymentMethod: string,
     tipAmount: number,

@@ -64,7 +64,7 @@ public class OrderService {
      *         if the submission failed.
      */
     public Order submitOrder(
-            int employeeId,
+            Integer employeeId,
             Integer customerId,
             String paymentMethod,
             BigDecimal tipAmount,
@@ -138,14 +138,18 @@ public class OrderService {
      */
     private int insertOrder(
             Connection conn,
-            int employeeId,
+            Integer employeeId,
             Integer customerId,
             BigDecimal totalPrice,
             BigDecimal tipAmount,
             String paymentMethod
     ) throws SQLException {
         try (PreparedStatement stmt = conn.prepareStatement(INSERT_ORDER)) {
-            stmt.setInt(1, employeeId);
+            if (employeeId != null) {
+                stmt.setInt(1, employeeId);
+            } else {
+                stmt.setNull(1, Types.INTEGER);
+            }
             if (customerId != null) {
                 stmt.setInt(2, customerId);
             } else {

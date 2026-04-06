@@ -19,7 +19,7 @@
       precipitation?: number[];
     };
   }
-
+//Store neccesary data to be displayed
   interface WeatherInfo {
     city: string;
     date: string;
@@ -28,7 +28,7 @@
     condition: string;
     emoji: string;
   }
-
+//fun lil emojis to display
   const WMO_CODES: Record<number, [string, string]> = {
     0:  ['Clear Sky',            '☀️'],
     1:  ['Mainly Clear',         '🌤️'],
@@ -57,7 +57,7 @@
     96: ['Thunderstorm w/ Hail', '⛈️'],
     99: ['Severe Thunderstorm',  '⛈️'],
   };
-
+//stores info as volatile so that it will properly update upon loading
   let weather = $state<WeatherInfo | null>(null);
   let error = $state<string | null>(null);
   let loading = $state(true);
@@ -69,7 +69,7 @@
       const geo = await geoRes.json();
 
       const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${geo.latitude}&longitude=${geo.longitude}&current=temperature_2m,weather_code&hourly=precipitation&temperature_unit=fahrenheit&timezone=auto`;
-
+//API call
       const wxRes = await fetch(wxUrl);
       if (!wxRes.ok) throw new Error('Weather fetch failed.');
       const wx = await wxRes.json();

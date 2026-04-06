@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
  */
 public record Order(
         int orderId,
-        int employeeId,
+        Integer employeeId,
         Integer customerId,
         LocalDateTime timestamp,
         BigDecimal totalPrice,

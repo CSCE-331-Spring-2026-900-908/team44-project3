@@ -3,7 +3,7 @@
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { getCategories } from '$lib/api';
-    import { getEmployee, getDisplayName } from '$lib/stores/auth.svelte';
+    import { getEmployee, getDisplayName, isManager } from '$lib/stores/auth.svelte';
     import { logout as apiLogout } from '$lib/api';
     import { formatCurrency, TAX_RATE, toTitleCase } from '$lib/utils';
     import CategoryItems from '$lib/components/CategoryItems.svelte';
@@ -29,8 +29,20 @@
     let completedTotal = $state(0);
     let completedPointsEarned = $state(0);
 
+    const POINTS_PER_REDEEM = 10;
+
+    let redeemedIndices = $state<Set<number>>(new Set());
+
+    let maxRedeemable = $derived(
+        customer ? Math.floor(customer.rewardPoints / POINTS_PER_REDEEM) : 0
+    );
+
+    let discount = $derived(
+        cart.reduce((sum, c, i) => sum + (redeemedIndices.has(i) ? c.item.basePrice : 0), 0)
+    );
+
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
-    let tax = $derived(Math.round(subtotal * TAX_RATE * 100) / 100);
+    let tax = $derived(Math.round((subtotal - discount) * TAX_RATE * 100) / 100);
 
     $effect(() => {
         if (!getEmployee()) {
@@ -59,6 +71,23 @@
 
     function removeFromCart(index: number) {
         cart = cart.filter((_, i) => i !== index);
+        // Rebuild redeemed indices after removal
+        const updated = new Set<number>();
+        for (const idx of redeemedIndices) {
+            if (idx < index) updated.add(idx);
+            else if (idx > index) updated.add(idx - 1);
+        }
+        redeemedIndices = updated;
+    }
+
+    function toggleRedeem(index: number) {
+        const next = new Set(redeemedIndices);
+        if (next.has(index)) {
+            next.delete(index);
+        } else if (next.size < maxRedeemable) {
+            next.add(index);
+        }
+        redeemedIndices = next;
     }
 
     function handleCustomerConfirm(c: Customer) {
@@ -78,6 +107,7 @@
     function newSale() {
         cart = [];
         customer = null;
+        redeemedIndices = new Set();
         showComplete = false;
     }
 
@@ -89,7 +119,13 @@
 {#if getEmployee()}
 <div class="ordering-layout">
     <header class="ordering-header">
-        <h1>Team 44 Boba POS</h1>
+        <div class="header-left">
+            <h1>Team 44 Boba POS</h1>
+            {#if isManager()}
+                <span class="header-divider"></span>
+                <a href={resolve('/manager')} class="dashboard-link">&larr; Dashboard</a>
+            {/if}
+        </div>
         <div class="header-right">
             <span class="employee-name">{getDisplayName()}</span>
             <button class="btn-ghost" onclick={logout}>Logout</button>
@@ -125,6 +161,9 @@
                 <h3>Current Order</h3>
                 {#if customer}
                     <span class="badge badge-success">{customer.firstName}</span>
+                    <span class="points-badge" class:points-redeemable={customer.rewardPoints >= 10}>
+                        {customer.rewardPoints} pts
+                    </span>
                 {:else}
                     <button class="btn-ghost" onclick={() => (showCheckIn = true)}>
                         + Customer
@@ -132,12 +171,18 @@
                 {/if}
             </div>
 
+            {#if customer && maxRedeemable > 0 && maxRedeemable > redeemedIndices.size}
+                <div class="free-drink-hint">
+                    {maxRedeemable - redeemedIndices.size} free drink{maxRedeemable - redeemedIndices.size > 1 ? 's' : ''} available
+                </div>
+            {/if}
+
             <div class="cart-items">
                 {#if cart.length === 0}
                     <p class="empty-cart">No items yet</p>
                 {:else}
                     {#each cart as cartItem, i (i)}
-                        <div class="cart-row">
+                        <div class="cart-row" class:redeemed={redeemedIndices.has(i)}>
                             <div class="cart-item-info">
                                 <span class="cart-item-name">{toTitleCase(cartItem.item.name)}</span>
                                 <span class="cart-item-details">
@@ -149,9 +194,30 @@
                                         + {cartItem.addOns.map((a) => toTitleCase(a.name)).join(', ')}
                                     </span>
                                 {/if}
+                                <div class="cart-item-bottom">
+                                    {#if redeemedIndices.has(i)}
+                                        <span class="redeem-label">FREE (reward)</span>
+                                        <span class="cart-item-price-row">
+                                            <span class="price-struck">{formatCurrency(cartItem.item.basePrice)}</span>
+                                            <span class="price-free">{formatCurrency(cartItem.totalPrice - cartItem.item.basePrice)}</span>
+                                        </span>
+                                    {:else}
+                                        <span class="cart-item-price">{formatCurrency(cartItem.totalPrice)}</span>
+                                    {/if}
+                                    {#if maxRedeemable > 0 && customer}
+                                        <button
+                                            class="btn-ghost redeem-toggle"
+                                            class:active={redeemedIndices.has(i)}
+                                            onclick={() => toggleRedeem(i)}
+                                            disabled={!redeemedIndices.has(i) && redeemedIndices.size >= maxRedeemable}
+                                            title={redeemedIndices.has(i) ? 'Undo redeem' : 'Redeem free drink'}
+                                        >
+                                            {redeemedIndices.has(i) ? 'Undo' : 'Redeem'}
+                                        </button>
+                                    {/if}
+                                </div>
                             </div>
                             <div class="cart-item-actions">
-                                <span>{formatCurrency(cartItem.totalPrice)}</span>
                                 <button class="btn-ghost remove-btn" onclick={() => { removeFromCart(i); }}>
                                     &times;
                                 </button>
@@ -162,24 +228,36 @@
             </div>
 
             <div class="cart-footer">
+                {#if redeemedIndices.size > 0}
+                    <div class="cart-discount-banner">
+                        {redeemedIndices.size} drink{redeemedIndices.size > 1 ? 's' : ''} redeemed
+                        ({redeemedIndices.size * POINTS_PER_REDEEM} pts)
+                    </div>
+                {/if}
                 <div class="cart-total">
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
                 </div>
+                {#if discount > 0}
+                    <div class="cart-discount">
+                        <span>Rewards Discount</span>
+                        <span>-{formatCurrency(discount)}</span>
+                    </div>
+                {/if}
                 <div class="cart-tax">
                     <span>Tax (8.25%)</span>
                     <span>{formatCurrency(tax)}</span>
                 </div>
                 <div class="cart-total cart-grand-total">
                     <span>Total</span>
-                    <span>{formatCurrency(subtotal + tax)}</span>
+                    <span>{formatCurrency(subtotal - discount + tax)}</span>
                 </div>
                 <button
                     class="btn-primary btn-full btn-lg"
                     disabled={cart.length === 0}
                     onclick={() => (showPayment = true)}
                 >
-                    Charge {formatCurrency(subtotal + tax)}
+                    Charge {formatCurrency(subtotal - discount + tax)}
                 </button>
             </div>
         </aside>
@@ -195,6 +273,7 @@
 
 <CustomerCheckIn
     open={showCheckIn}
+    mode="email"
     onclose={() => (showCheckIn = false)}
     onconfirm={handleCustomerConfirm}
 />
@@ -203,6 +282,7 @@
     open={showPayment}
     {cart}
     {customer}
+    {redeemedIndices}
     onclose={() => (showPayment = false)}
     oncomplete={handlePaymentComplete}
 />
@@ -245,6 +325,34 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .header-divider {
+        width: 1px;
+        height: 1.2rem;
+        background: var(--color-border);
+    }
+
+    .dashboard-link {
+        font-size: 0.8rem;
+        text-decoration: none;
+        color: var(--color-primary);
+        font-weight: 600;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        border: 1.5px solid var(--color-primary);
+        transition: background 0.15s, color 0.15s;
+    }
+
+    .dashboard-link:hover {
+        background: var(--color-primary);
+        color: white;
     }
 
     .employee-name {
@@ -399,5 +507,122 @@
         margin-top: 0.25rem;
         margin-bottom: 0.75rem;
         font-size: 1.05rem;
+    }
+
+    .free-drink-hint {
+        text-align: center;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #e65100;
+        background: #fff3e0;
+        padding: 0.35rem 0.75rem;
+        margin: 0 1.25rem;
+        border-radius: var(--radius);
+    }
+
+    .cart-row.redeemed {
+        background: #f0faf0;
+        border-radius: var(--radius);
+        padding: 0.5rem 0.4rem;
+        border-bottom-color: transparent;
+    }
+
+    .cart-item-bottom {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+    }
+
+    .cart-item-price {
+        font-weight: 500;
+        font-size: 0.875rem;
+    }
+
+    .cart-item-price-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .redeem-label {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #2e7d32;
+        background: #e8f5e9;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+    }
+
+    .price-struck {
+        text-decoration: line-through;
+        color: var(--color-text-muted);
+        font-size: 0.8rem;
+    }
+
+    .price-free {
+        font-weight: 600;
+        color: #2e7d32;
+    }
+
+    .redeem-toggle {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        color: #e65100;
+        border: 1px solid #e65100;
+        background: transparent;
+        font-weight: 600;
+    }
+
+    .redeem-toggle.active {
+        background: #e65100;
+        color: white;
+    }
+
+    .redeem-toggle:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .cart-discount-banner {
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #2e7d32;
+        background: #e8f5e9;
+        padding: 0.4rem;
+        border-radius: var(--radius);
+        margin-bottom: 0.5rem;
+    }
+
+    .cart-discount {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: #2e7d32;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+    }
+
+    .points-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.15rem 0.5rem;
+        border-radius: 12px;
+        background: var(--color-border);
+        color: var(--color-text-muted);
+    }
+
+    .points-badge.points-redeemable {
+        background: #fff3e0;
+        color: #e65100;
+        animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(230, 81, 0, 0.2); }
+        50% { box-shadow: 0 0 8px 2px rgba(230, 81, 0, 0.3); }
     }
 </style>

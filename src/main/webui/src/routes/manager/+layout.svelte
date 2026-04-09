@@ -54,6 +54,10 @@
             {/each}
         </nav>
 
+        <div class="sidebar-pos-link">
+            <a href={resolve('/cashier')} class="pos-link">Switch to POS</a>
+        </div>
+
         <div class="sidebar-footer">
             <span class="user-name">{getDisplayName()}</span>
             <button class="btn-ghost" onclick={logout}>Logout</button>
@@ -126,6 +130,27 @@
     .nav-link.active {
         background: var(--color-primary);
         color: white;
+    }
+
+    .sidebar-pos-link {
+        padding: 0.75rem 1rem;
+    }
+
+    .pos-link {
+        display: block;
+        text-align: center;
+        padding: 0.6rem 1rem;
+        border-radius: var(--radius);
+        background: var(--color-primary);
+        color: white;
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 700;
+        transition: opacity 0.15s;
+    }
+
+    .pos-link:hover {
+        opacity: 0.85;
     }
 
     .sidebar-footer {

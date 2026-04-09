@@ -27,6 +27,7 @@
     let completedOrderId = $state(0);
     let completedTip = $state(0);
     let completedTotal = $state(0);
+    let completedPointsEarned = $state(0);
 
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
     let tax = $derived(Math.round(subtotal * TAX_RATE * 100) / 100);
@@ -65,10 +66,11 @@
         showCheckIn = false;
     }
 
-    function handlePaymentComplete(orderId: number, tip: number, total: number) {
+    function handlePaymentComplete(orderId: number, tip: number, total: number, pointsEarned: number) {
         completedOrderId = orderId;
         completedTip = tip;
         completedTotal = total;
+        completedPointsEarned = pointsEarned;
         showPayment = false;
         showComplete = true;
     }
@@ -210,6 +212,7 @@
     orderId={completedOrderId}
     tip={completedTip}
     total={completedTotal}
+    pointsEarned={completedPointsEarned}
     onnewsale={newSale}
     onclose={() => (showComplete = false)}
 />

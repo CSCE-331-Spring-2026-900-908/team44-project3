@@ -175,7 +175,15 @@ export async function deleteInventoryItem(id: number): Promise<void> {
 
 // Customers
 export async function findCustomerByPhone(phone: string): Promise<Customer | null> {
-    return request<Customer | null>(`/customers/lookup?phone=${encodeURIComponent(phone)}`);
+    const res = await fetch(`${BASE}/customers/lookup?phone=${encodeURIComponent(phone)}`, {
+        headers: {
+            'Content-Type': 'application/json',
+            ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {})
+        }
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+    return res.json() as Promise<Customer>;
 }
 
 // Customers
@@ -192,11 +200,12 @@ export async function submitOrder(
     customerId: number | null,
     paymentMethod: string,
     tipAmount: number,
-    cart: CartItem[]
+    cart: CartItem[],
+    redeemedIndices: number[] = []
 ): Promise<Order | null> {
     return request<Order | null>('/orders', {
         method: 'POST',
-        body: JSON.stringify({ employeeId, customerId, paymentMethod, tipAmount, cart })
+        body: JSON.stringify({ employeeId, customerId, paymentMethod, tipAmount, cart, redeemedIndices })
     });
 }
 

@@ -29,14 +29,16 @@ public class OrderResource {
             Integer customerId,
             String paymentMethod,
             BigDecimal tipAmount,
-            List<CartItem> cart
+            List<CartItem> cart,
+            List<Integer> redeemedIndices
     ) {}
 
     @POST
     public Response submit(OrderRequest req) {
         Order order = orderService.submitOrder(
                 req.employeeId(), req.customerId(),
-                req.paymentMethod(), req.tipAmount(), req.cart()
+                req.paymentMethod(), req.tipAmount(), req.cart(),
+                req.redeemedIndices() != null ? req.redeemedIndices() : List.of()
         );
         if (order == null) {
             return Response.serverError().build();

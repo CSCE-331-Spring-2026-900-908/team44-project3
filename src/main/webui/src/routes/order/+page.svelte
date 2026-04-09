@@ -44,8 +44,20 @@
     let completedTotal = $state(0);
     let completedPointsEarned = $state(0);
 
+    const POINTS_PER_REDEEM = 10;
+
+    let redeemedIndices = $state<Set<number>>(new Set());
+
+    let maxRedeemable = $derived(
+        customer ? Math.floor(customer.rewardPoints / POINTS_PER_REDEEM) : 0
+    );
+
+    let discount = $derived(
+        cart.reduce((sum, c, i) => sum + (redeemedIndices.has(i) ? c.item.basePrice : 0), 0)
+    );
+
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
-    let tax = $derived(Math.round(subtotal * TAX_RATE * 100) / 100);
+    let tax = $derived(Math.round((subtotal - discount) * TAX_RATE * 100) / 100);
 
     let idleSeconds = $state(0);
     let showIdleWarning = $state(false);
@@ -136,6 +148,22 @@
 
     function removeFromCart(index: number) {
         cart = cart.filter((_, i) => i !== index);
+        const updated = new Set<number>();
+        for (const idx of redeemedIndices) {
+            if (idx < index) updated.add(idx);
+            else if (idx > index) updated.add(idx - 1);
+        }
+        redeemedIndices = updated;
+    }
+
+    function toggleRedeem(index: number) {
+        const next = new Set(redeemedIndices);
+        if (next.has(index)) {
+            next.delete(index);
+        } else if (next.size < maxRedeemable) {
+            next.add(index);
+        }
+        redeemedIndices = next;
     }
 
     function handleCustomerConfirm(c: Customer) {
@@ -162,6 +190,7 @@
     function startOver() {
         cart = [];
         customer = getCustomer();
+        redeemedIndices = new Set();
         customizeItem = null;
         showCustomize = false;
         showCheckIn = false;
@@ -189,6 +218,9 @@
                         ? toTitleCase(`${customer.firstName} ${customer.lastName}`)
                         : customer.email}</span
                 >
+                <span class="points-badge" class:points-redeemable={customer.rewardPoints >= 10}>
+                    {customer.rewardPoints} pts
+                </span>
             {:else}
                 <button class="header-btn" onclick={() => (showCheckIn = true)}> Sign In </button>
             {/if}
@@ -262,12 +294,18 @@
         <aside class="cart-panel">
             <h3 class="cart-title">Your Cart</h3>
 
+            {#if customer && maxRedeemable > 0 && maxRedeemable > redeemedIndices.size && cart.length > 0}
+                <div class="free-drink-banner">
+                    You have {maxRedeemable - redeemedIndices.size} free drink{maxRedeemable - redeemedIndices.size > 1 ? 's' : ''}! Tap the <strong>Redeem</strong> button next to any item below.
+                </div>
+            {/if}
+
             <div class="cart-items">
                 {#if cart.length === 0}
                     <p class="cart-empty">Your cart is empty. Browse the menu and add items!</p>
                 {:else}
                     {#each cart as cartItem, i (i)}
-                        <div class="cart-card">
+                        <div class="cart-card" class:redeemed={redeemedIndices.has(i)}>
                             <div class="cart-card-icon">
                                 {categoryEmojis[cartItem.item.category] ?? '\u{1F964}'}
                             </div>
@@ -284,9 +322,29 @@
                                             .join(', ')}
                                     </span>
                                 {/if}
-                                <span class="cart-card-price"
-                                    >{formatCurrency(cartItem.totalPrice)}</span
-                                >
+                                <div class="cart-card-bottom">
+                                    {#if redeemedIndices.has(i)}
+                                        <span class="redeem-label">FREE (reward)</span>
+                                        <span class="cart-card-price">
+                                            <span class="price-struck">{formatCurrency(cartItem.item.basePrice)}</span>
+                                            {formatCurrency(cartItem.totalPrice - cartItem.item.basePrice)}
+                                        </span>
+                                    {:else}
+                                        <span class="cart-card-price"
+                                            >{formatCurrency(cartItem.totalPrice)}</span
+                                        >
+                                    {/if}
+                                    {#if maxRedeemable > 0 && customer}
+                                        <button
+                                            class="redeem-toggle"
+                                            class:active={redeemedIndices.has(i)}
+                                            onclick={() => toggleRedeem(i)}
+                                            disabled={!redeemedIndices.has(i) && redeemedIndices.size >= maxRedeemable}
+                                        >
+                                            {redeemedIndices.has(i) ? 'Undo' : 'Redeem'}
+                                        </button>
+                                    {/if}
+                                </div>
                             </div>
                             <button class="cart-remove" onclick={() => removeFromCart(i)}
                                 >&times;</button
@@ -297,24 +355,36 @@
             </div>
 
             <div class="cart-summary">
+                {#if redeemedIndices.size > 0}
+                    <div class="cart-discount-banner">
+                        {redeemedIndices.size} drink{redeemedIndices.size > 1 ? 's' : ''} redeemed
+                        ({redeemedIndices.size * POINTS_PER_REDEEM} pts)
+                    </div>
+                {/if}
                 <div class="summary-line">
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
                 </div>
+                {#if discount > 0}
+                    <div class="summary-line discount-line">
+                        <span>Rewards Discount</span>
+                        <span>-{formatCurrency(discount)}</span>
+                    </div>
+                {/if}
                 <div class="summary-line tax-line">
                     <span>Tax (8.25%)</span>
                     <span>{formatCurrency(tax)}</span>
                 </div>
                 <div class="summary-line total-line">
                     <span>Total</span>
-                    <span>{formatCurrency(subtotal + tax)}</span>
+                    <span>{formatCurrency(subtotal - discount + tax)}</span>
                 </div>
                 <button
                     class="pay-btn"
                     disabled={cart.length === 0}
                     onclick={() => (showPayment = true)}
                 >
-                    Pay {formatCurrency(subtotal + tax)}
+                    Pay {formatCurrency(subtotal - discount + tax)}
                 </button>
                 {#if cart.length > 0}
                     <button class="reset-btn" onclick={() => (showConfirmReset = true)}
@@ -407,6 +477,7 @@
     open={showPayment}
     {cart}
     {customer}
+    {redeemedIndices}
     employeeId={null}
     onclose={() => (showPayment = false)}
     oncomplete={handlePaymentComplete}
@@ -906,5 +977,104 @@
 
     .confirm-exit-btn:hover {
         background: #c0392b;
+    }
+
+    .free-drink-banner {
+        text-align: center;
+        font-size: 0.82rem;
+        color: #e65100;
+        background: #fff3e0;
+        padding: 0.6rem 0.75rem;
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        line-height: 1.4;
+    }
+
+    .cart-card.redeemed {
+        background: #f0faf0;
+        border-color: #c8e6c9;
+    }
+
+    .redeem-label {
+        display: inline-block;
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #2e7d32;
+        background: #e8f5e9;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        margin-top: 0.1rem;
+    }
+
+    .price-struck {
+        text-decoration: line-through;
+        color: #999;
+        margin-right: 0.3rem;
+    }
+
+    .cart-card-bottom {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.2rem;
+        flex-wrap: wrap;
+    }
+
+    .redeem-toggle {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 8px;
+        border: 1.5px solid #e65100;
+        background: transparent;
+        color: #e65100;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .redeem-toggle.active {
+        background: #e65100;
+        color: white;
+    }
+
+    .redeem-toggle:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .cart-discount-banner {
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #2e7d32;
+        background: #e8f5e9;
+        padding: 0.4rem;
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+    }
+
+    .discount-line {
+        color: #2e7d32;
+        font-weight: 600;
+    }
+
+    .points-badge {
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        background: #ece4d8;
+        color: #8b7355;
+    }
+
+    .points-badge.points-redeemable {
+        background: #fff3e0;
+        color: #e65100;
+        animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(230, 81, 0, 0.2); }
+        50% { box-shadow: 0 0 8px 2px rgba(230, 81, 0, 0.3); }
     }
 </style>

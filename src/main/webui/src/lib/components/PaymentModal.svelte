@@ -18,7 +18,7 @@
         customer: Customer | null;
         employeeId?: number | null;
         onclose: () => void;
-        oncomplete: (orderId: number, tip: number, total: number) => void;
+        oncomplete: (orderId: number, tip: number, total: number, pointsEarned: number) => void;
     } = $props();
 
     type Step = 'method' | 'tip' | 'confirm';
@@ -79,7 +79,7 @@
                 cart
             );
             if (order) {
-                oncomplete(order.orderId, tipAmount, total);
+                oncomplete(order.orderId, tipAmount, total, order.pointsEarned);
             } else {
                 error = 'Failed to submit order.';
             }

@@ -61,6 +61,7 @@ export interface Order {
     tipAmount: number;
     totalAmount: number;
     orderDate: string;
+    pointsEarned: number;
 }
 
 export interface RestockOrder {

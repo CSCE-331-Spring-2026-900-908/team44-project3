@@ -47,6 +47,12 @@ public class OrderService {
               AND mc.menu_item_id = ?
             """;
 
+    private static final String ADD_REWARD_POINTS = """
+            UPDATE customers
+            SET reward_points = reward_points + ?
+            WHERE customer_id = ?
+            """;
+
     @Inject
     DataSource dataSource;
 
@@ -93,12 +99,20 @@ public class OrderService {
                     }
                 }
 
+                int pointsEarned = 0;
+                if (customerId != null) {
+                    pointsEarned = totalPrice.divideToIntegralValue(BigDecimal.valueOf(5)).intValue();
+                    if (pointsEarned > 0) {
+                        addRewardPoints(conn, customerId, pointsEarned);
+                    }
+                }
+
                 conn.commit();
 
                 return new Order(
                         orderId, employeeId, customerId,
                         LocalDateTime.now(), totalPrice,
-                        tipAmount, paymentMethod
+                        tipAmount, paymentMethod, pointsEarned
                 );
             } catch (Exception e) {
                 conn.rollback();
@@ -219,6 +233,14 @@ public class OrderService {
             stmt.setNull(6, Types.VARCHAR);
             stmt.setBigDecimal(7, addOn.basePrice());
             stmt.executeQuery();
+        }
+    }
+
+    private void addRewardPoints(Connection conn, int customerId, int points) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(ADD_REWARD_POINTS)) {
+            stmt.setInt(1, points);
+            stmt.setInt(2, customerId);
+            stmt.executeUpdate();
         }
     }
 }

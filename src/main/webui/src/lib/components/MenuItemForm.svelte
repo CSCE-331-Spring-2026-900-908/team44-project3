@@ -31,6 +31,7 @@
     let size = $state('Medium');
     let basePrice = $state(0);
     let isAvailable = $state(true);
+    let isHot = $state(false);
     let ingredients = $state<IngredientRow[]>([]);
     let inventoryNames = $state<string[]>([]);
     let error = $state('');
@@ -47,12 +48,14 @@
                 size = item.size;
                 basePrice = item.basePrice;
                 isAvailable = item.isAvailable;
+                isHot = item.isHot;
             } else {
                 name = '';
                 category = '';
                 size = 'Medium';
                 basePrice = 0;
                 isAvailable = true;
+                isHot = false;
             }
             ingredients = [];
             error = '';
@@ -91,7 +94,8 @@
                     category,
                     size,
                     basePrice,
-                    isAvailable
+                    isAvailable,
+                    isHot
                 });
             } else {
                 const newId = await addMenuItem({
@@ -99,7 +103,8 @@
                     category,
                     size,
                     basePrice,
-                    isAvailable
+                    isAvailable,
+                    isHot
                 });
                 for (const ing of ingredients) {
                     if (!ing.name) continue;
@@ -124,7 +129,7 @@
 </script>
 
 <Modal {open} title={isEdit ? 'Edit Menu Item' : 'Add Menu Item'} {onclose} wide>
-    <form class="menu-form" onsubmit={save}>
+    <form class="menu-form" onsubmit={(e) => { e.preventDefault(); void save(); }}>
         <div class="form-grid">
             <label for="mi-name">Name</label>
             <input id="mi-name" bind:value={name} />
@@ -144,6 +149,26 @@
 
             <label for="mi-avail">Available</label>
             <input id="mi-avail" type="checkbox" bind:checked={isAvailable} />
+
+            <label>Serve Temperature</label>
+            <div class="temp-row">
+                <button
+                    type="button"
+                    class="temp-btn temp-cold"
+                    class:selected={!isHot}
+                    onclick={() => (isHot = false)}
+                >
+                    Cold
+                </button>
+                <button
+                    type="button"
+                    class="temp-btn temp-hot"
+                    class:selected={isHot}
+                    onclick={() => (isHot = true)}
+                >
+                    Hot
+                </button>
+            </div>
         </div>
 
         {#if !isEdit}
@@ -240,6 +265,39 @@
         color: var(--color-danger);
         font-size: 1.25rem;
         padding: 0 0.25rem;
+    }
+
+    .temp-row {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .temp-btn {
+        flex: 1;
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius);
+        border: 2px solid var(--color-border);
+        background: var(--color-surface);
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .temp-btn.temp-cold.selected {
+        background: #e3f2fd;
+        border-color: #1976d2;
+        color: #1565c0;
+    }
+
+    .temp-btn.temp-hot.selected {
+        background: #fbe9e7;
+        border-color: #e64a19;
+        color: #d84315;
+    }
+
+    .temp-btn:not(.selected):hover {
+        border-color: #999;
     }
 
     .actions {

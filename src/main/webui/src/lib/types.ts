@@ -16,6 +16,7 @@ export interface MenuItem {
     size: string;
     basePrice: number;
     isAvailable: boolean;
+    isHot: boolean;
 }
 
 export interface MenuItemContent {
@@ -106,4 +107,4 @@ export interface InventoryUsageData {
 }
 
 export type SweetnessLevel = '0%' | '25%' | '50%' | '75%' | '100%';
-export type IceLevel = 'No Ice' | 'Less Ice' | 'Regular Ice' | 'Extra Ice';
+export type IceLevel = 'Hot' | 'No Ice' | 'Less Ice' | 'Regular Ice' | 'Extra Ice';

@@ -107,10 +107,16 @@ export async function addMenuItem(item: Omit<MenuItem, 'menuItemId'>): Promise<n
 }
 
 export async function updateMenuItem(item: MenuItem): Promise<void> {
-    await request<void>(`/menu/items/${String(item.menuItemId)}`, {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE}/menu/items/${String(item.menuItemId)}`, {
         method: 'PUT',
+        headers,
         body: JSON.stringify(item)
     });
+    if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
 }
 
 export async function deleteMenuItem(id: number): Promise<void> {

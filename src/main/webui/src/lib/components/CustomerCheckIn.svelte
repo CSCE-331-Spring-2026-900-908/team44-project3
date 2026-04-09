@@ -41,7 +41,7 @@
                 customer = await findCustomerByPhone(input.trim());
                 if (!customer) error = 'Customer not found.';
             } else {
-                customer = await customerCheckin(input.trim());
+                customer = await customerCheckin(input.trim().toLowerCase());
             }
         } catch {
             error = mode === 'phone' ? 'Lookup failed.' : 'Check-in failed. Please try again.';

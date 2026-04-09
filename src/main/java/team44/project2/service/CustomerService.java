@@ -26,8 +26,8 @@ public class CustomerService {
     private static final String FIND_BY_EMAIL = """
             SELECT *
             FROM customers
-            WHERE email = ?
-            ORDER BY customer_id DESC
+            WHERE LOWER(email) = LOWER(?)
+            ORDER BY customer_id ASC
             LIMIT 1
             """;
 
@@ -47,7 +47,12 @@ public class CustomerService {
      * @return The matching {@link team44.project2.model.Customer}, or {@code null} if
      *         no customer with that phone number exists.
      */
+    private static String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
+    }
+
     public Customer findByPhone(String phone) {
+        phone = phone == null ? "" : phone.trim();
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(FIND_BY_PHONE)) {
 
@@ -65,6 +70,7 @@ public class CustomerService {
     }
 
     public Customer findByEmail(String email) {
+        email = normalizeEmail(email);
         try (Connection conn = dataSource.getConnection();
              PreparedStatement stmt = conn.prepareStatement(FIND_BY_EMAIL)) {
 
@@ -82,6 +88,7 @@ public class CustomerService {
     }
 
     public Customer findOrCreateByEmail(String email) {
+        email = normalizeEmail(email);
         Customer existing = findByEmail(email);
         if (existing != null) return existing;
 

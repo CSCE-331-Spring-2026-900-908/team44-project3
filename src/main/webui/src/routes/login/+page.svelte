@@ -85,6 +85,11 @@
                     <span class="role-name">Manager Dashboard</span>
                     <span class="role-desc">Menus, Reports & Administration</span>
                 </button>
+                <button class="role-btn display" onclick={() => goto('/display')}>
+                    <span class="role-icon">📺</span>
+                    <span class="role-name">Store Displays</span>
+                    <span class="role-desc">Kitchen, Pickup, and Menu Boards</span>
+                </button>
             </div>
 
             <a href={resolve('/')} class="back-link">Back to Customer View</a>

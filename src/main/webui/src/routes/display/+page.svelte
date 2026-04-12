@@ -6,15 +6,15 @@ import { goto } from '$app/navigation';
     <h1>Store Displays</h1>
 
     <div class="display-grid">
-        <button onclick={() => goto('/display/kitchen')}>
+        <button onclick={() => goto('/kitchen')}>
             🍳 Kitchen Display
         </button>
 
-        <button onclick={() => goto('/display/pickup')}>
+        <button onclick={() => goto('/pickup')}>
             🧋 Pickup Display
         </button>
 
-        <button onclick={() => goto('/display/menu')}>
+        <button onclick={() => goto('/menu')}>
             📋 Menu Board
         </button>
     </div>

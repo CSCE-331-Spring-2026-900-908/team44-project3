@@ -7,6 +7,9 @@ import team44.project2.model.menu.MenuItem;
 import team44.project2.model.order.CartItem;
 import team44.project2.model.order.Order;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.sql.*;
@@ -47,6 +50,25 @@ public class OrderService {
               AND mc.menu_item_id = ?
             """;
 
+    private static final String GET_KITCHEN_ORDERS = """
+            SELECT 
+                o.order_id,
+                o.timestamp,
+                m.name
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN menu_items m ON oi.menu_item_id = m.menu_item_id
+            WHERE oi.parent_item_id IS NULL
+            ORDER BY o.timestamp DESC
+            LIMIT 20
+        """;
+
+        private static final String GET_PICKUP_ORDERS = """
+            SELECT order_id, timestamp
+            FROM orders
+            ORDER BY timestamp DESC
+            LIMIT 10
+        """;
     private static final String ADD_REWARD_POINTS = """
             UPDATE customers
             SET reward_points = reward_points + ?
@@ -261,6 +283,58 @@ public class OrderService {
             stmt.executeQuery();
         }
     }
+    public List<Map<String, Object>> getKitchenOrders() {
+        List<Map<String, Object>> orders = new ArrayList<>();
+
+        try (
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(GET_KITCHEN_ORDERS);
+            ResultSet rs = stmt.executeQuery()
+        ) {
+
+            while (rs.next()) {
+                Map<String, Object> order = new HashMap<>();
+
+                order.put("orderId", rs.getInt("order_id"));
+                order.put("timestamp", rs.getTimestamp("timestamp"));
+                order.put("item", rs.getString("name"));
+
+                orders.add(order);
+            }
+
+        } catch (Exception e) {
+            Log.error("Failed to fetch kitchen orders", e);
+        }
+
+        return orders;
+    }
+    
+    public List<Map<String, Object>> getPickupOrders() {
+        List<Map<String, Object>> orders = new ArrayList<>();
+
+        try (
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(GET_PICKUP_ORDERS);
+            ResultSet rs = stmt.executeQuery()
+        ) {
+
+            while (rs.next()) {
+                Map<String, Object> order = new HashMap<>();
+
+                order.put("orderId", rs.getInt("order_id"));
+                order.put("timestamp", rs.getTimestamp("timestamp"));
+
+                orders.add(order);
+            }
+
+        } catch (Exception e) {
+            Log.error("Failed to fetch pickup orders", e);
+        }
+
+        return orders;
+    }
+}
+
 
     private void addRewardPoints(Connection conn, int customerId, int points) throws SQLException {
         try (PreparedStatement stmt = conn.prepareStatement(ADD_REWARD_POINTS)) {

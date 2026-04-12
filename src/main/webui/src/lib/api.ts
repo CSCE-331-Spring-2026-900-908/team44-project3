@@ -268,3 +268,17 @@ export async function createRestockOrder(
         body: JSON.stringify({ employeeId, inventoryId, quantity })
     });
 }
+
+// Display
+
+export async function getKitchenOrders(): Promise<any[]> {
+    return request<any[]>('/display/kitchen');
+}
+
+export async function getPickupOrders(): Promise<any[]> {
+    return request<any[]>('/display/pickup');
+}
+
+export async function getDisplayMenu(): Promise<MenuItem[]> {
+    return request<MenuItem[]>('/display/menu');
+}

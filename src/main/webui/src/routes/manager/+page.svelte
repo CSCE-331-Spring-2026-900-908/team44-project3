@@ -26,6 +26,12 @@
             description: 'Sales, X/Z reports, and trends',
             path: '/manager/reports' as const,
             color: '#FFD45A'
+        },
+        {
+            title: 'Large Display',
+            description: 'Displays above the cashiers while customers order',
+            path:  '/display' as const,
+            color: '#FFD676'
         }
     ] as const;
 </script>

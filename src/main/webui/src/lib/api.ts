@@ -280,5 +280,5 @@ export async function getPickupOrders(): Promise<any[]> {
 }
 
 export async function getDisplayMenu(): Promise<MenuItem[]> {
-    return request<MenuItem[]>('/display/menu');
+    return request<any[]>('/display/menu');
 }

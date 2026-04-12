@@ -333,7 +333,6 @@ public class OrderService {
 
         return orders;
     }
-}
 
 
     private void addRewardPoints(Connection conn, int customerId, int points) throws SQLException {

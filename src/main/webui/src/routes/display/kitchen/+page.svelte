@@ -25,32 +25,9 @@
     <div class="grid">
         {#each orders as order}
             <div class="card">
-                {#each orders as order}
-                    <div class="card">
-                        <h2>#{order.orderId}</h2>
-                        <div>{order.item}</div>
-                    </div>
-                {/each}
+                <h2>#{order.orderId}</h2>
+                <div>{order.item}</div>
             </div>
         {/each}
     </div>
 </div>
-
-<style>
-.screen {
-    padding: 2rem;
-    font-size: 1.5rem;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.5rem;
-}
-
-.card {
-    padding: 1.5rem;
-    background: white;
-    border-radius: 10px;
-}
-</style>

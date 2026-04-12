@@ -5,7 +5,12 @@
     let orders = [];
 
     async function load() {
-        orders = await getPickupOrders();
+        try {
+            orders = await getPickupOrders();
+            console.log("pickup orders:", orders);
+        } catch {
+            orders = [];
+        }
     }
 
     onMount(() => {
@@ -21,8 +26,8 @@
     <div class="grid">
         {#each orders as order}
             <div class="card">
-                <h2>#{order.id}</h2>
-                <p>{order.customerName}</p>
+                <h2>#{order.orderId}</h2>
+                <p>{order.timestamp}</p>
             </div>
         {/each}
     </div>

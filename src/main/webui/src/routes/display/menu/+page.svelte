@@ -5,7 +5,12 @@
     let items = [];
 
     async function load() {
-        items = await getMenu();
+        try{
+            items = await getMenu();
+            console.log("menu:", items);
+        } catch {
+            items = [];
+        }
     }
 
     onMount(() => {
@@ -22,7 +27,7 @@
         {#each items as item}
             <div class="card">
                 <h2>{item.name}</h2>
-                <p>${item.price}</p>
+                <p>${item.basePrice}</p>
             </div>
         {/each}
     </div>

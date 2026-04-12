@@ -73,8 +73,8 @@ public class MenuService {
             VALUES (?, ?, ?)
             """;
     private static final String INSERT_ITEM = """
-            INSERT INTO menu_items (name, category, size, base_price, is_available)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO menu_items (name, category, size, base_price, is_available, is_hot)
+            VALUES (?, ?, ?, ?, ?, ?)
             """;
 
     private static final String GET_INVENTORY_ID_BY_NAME = "SELECT inventory_id FROM inventory WHERE item_name = ?";
@@ -207,7 +207,8 @@ public class MenuService {
                 rs.getString("category"),
                 rs.getString("size"),
                 rs.getBigDecimal("base_price"),
-                rs.getBoolean("is_available")
+                rs.getBoolean("is_available"),
+                rs.getBoolean("is_hot")
         );
     }
 
@@ -220,7 +221,7 @@ public class MenuService {
     public void updateMenuItem(MenuItem item) {
         String UPDATE_ITEM = """
                 UPDATE menu_items
-                SET name = ?, category = ?, size = ?, base_price = ?, is_available = ?
+                SET name = ?, category = ?, size = ?, base_price = ?, is_available = ?, is_hot = ?
                 WHERE menu_item_id = ?
                 """;
         try (Connection conn = dataSource.getConnection();
@@ -230,7 +231,8 @@ public class MenuService {
             ps.setString(3, item.size());
             ps.setBigDecimal(4, item.basePrice());
             ps.setBoolean(5, item.isAvailable());
-            ps.setInt(6, item.menuItemId());
+            ps.setBoolean(6, item.isHot());
+            ps.setInt(7, item.menuItemId());
             ps.executeUpdate();
         } catch (Exception e) {
             Log.error("Failed to update menu item", e);
@@ -267,6 +269,7 @@ public class MenuService {
             ps.setString(3, item.size());
             ps.setBigDecimal(4, item.basePrice());
             ps.setBoolean(5, item.isAvailable());
+            ps.setBoolean(6, item.isHot());
             ps.executeUpdate();
             ResultSet rs = ps.getGeneratedKeys();
             return rs.next() ? rs.getInt(1) : -1;

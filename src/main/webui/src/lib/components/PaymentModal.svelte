@@ -9,6 +9,7 @@
         open,
         cart,
         customer,
+        redeemedIndices = new Set<number>(),
         employeeId = getEmployeeId(),
         onclose,
         oncomplete
@@ -16,9 +17,10 @@
         open: boolean;
         cart: CartItem[];
         customer: Customer | null;
+        redeemedIndices?: Set<number>;
         employeeId?: number | null;
         onclose: () => void;
-        oncomplete: (orderId: number, tip: number, total: number) => void;
+        oncomplete: (orderId: number, tip: number, total: number, pointsEarned: number) => void;
     } = $props();
 
     type Step = 'method' | 'tip' | 'confirm';
@@ -34,11 +36,14 @@
     let error = $state('');
 
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
-    let tax = $derived(Math.round(subtotal * TAX_RATE * 100) / 100);
-    let tipAmount = $derived(
-        customTip ? parseFloat(customTip) || 0 : subtotal * tipPercent
+    let discount = $derived(
+        cart.reduce((sum, c, i) => sum + (redeemedIndices.has(i) ? c.item.basePrice : 0), 0)
     );
-    let total = $derived(subtotal + tax + tipAmount);
+    let tax = $derived(Math.round((subtotal - discount) * TAX_RATE * 100) / 100);
+    let tipAmount = $derived(
+        customTip ? parseFloat(customTip) || 0 : (subtotal - discount) * tipPercent
+    );
+    let total = $derived(subtotal - discount + tax + tipAmount);
 
     $effect(() => {
         if (open) {
@@ -76,10 +81,11 @@
                 customer?.customerId ?? null,
                 selectedMethod,
                 tipAmount,
-                cart
+                cart,
+                Array.from(redeemedIndices)
             );
             if (order) {
-                oncomplete(order.orderId, tipAmount, total);
+                oncomplete(order.orderId, tipAmount, total, order.pointsEarned);
             } else {
                 error = 'Failed to submit order.';
             }
@@ -105,7 +111,7 @@
 
         {:else if step === 'tip'}
             <p class="step-label">Add a Tip?</p>
-            <p class="subtotal-label">Subtotal: {formatCurrency(subtotal)}</p>
+            <p class="subtotal-label">Subtotal: {formatCurrency(subtotal - discount)}</p>
             <div class="tip-grid">
                 {#each tipOptions as pct (pct)}
                     <button class="method-btn" onclick={() => { selectTip(pct); }}>
@@ -140,6 +146,12 @@
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
                 </div>
+                {#if discount > 0}
+                    <div class="summary-row discount-row">
+                        <span>Rewards Discount</span>
+                        <span>-{formatCurrency(discount)}</span>
+                    </div>
+                {/if}
                 <div class="summary-row">
                     <span>Tax (8.25%)</span>
                     <span>{formatCurrency(tax)}</span>
@@ -244,6 +256,11 @@
         justify-content: space-between;
         padding: 0.5rem 0;
         font-size: 0.875rem;
+    }
+
+    .discount-row {
+        color: #2e7d32;
+        font-weight: 600;
     }
 
     .total-row {

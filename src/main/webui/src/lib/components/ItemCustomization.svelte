@@ -26,11 +26,18 @@
     let selectedAddOns = $state<MenuItem[]>([]);
     let availableAddOns = $state<MenuItem[]>([]);
 
+    const iceLevelColors: Record<string, string> = {
+        'No Ice': '#e3f2fd',
+        'Less Ice': '#bbdefb',
+        'Regular Ice': '#64b5f6',
+        'Extra Ice': '#1565c0'
+    };
+
     $effect(() => {
         if (open) {
             selectedSize = item?.size ?? 'Medium';
             selectedSweetness = '100%';
-            selectedIce = 'Regular Ice';
+            selectedIce = item?.isHot ? 'Hot' : 'Regular Ice';
             selectedAddOns = [];
             void loadAddOns();
         }
@@ -106,18 +113,27 @@
         </section>
 
         <section>
-            <h4>Ice Level</h4>
-            <div class="option-row">
-                {#each iceLevels as level (level)}
-                    <button
-                        class="option-btn"
-                        class:selected={selectedIce === level}
-                        onclick={() => (selectedIce = level)}
-                    >
-                        {level}
+            <h4>{item?.isHot ? 'Temperature' : 'Ice Level'}</h4>
+            {#if item?.isHot}
+                <div class="option-row">
+                    <button class="option-btn ice-btn hot selected">
+                        Hot
                     </button>
-                {/each}
-            </div>
+                </div>
+            {:else}
+                <div class="option-row">
+                    {#each iceLevels as level (level)}
+                        <button
+                            class="option-btn ice-btn"
+                            class:selected={selectedIce === level}
+                            style="--ice-color: {iceLevelColors[level] ?? '#e3f2fd'}; --ice-text: {level === 'Extra Ice' ? 'white' : '#1565c0'}"
+                            onclick={() => (selectedIce = level)}
+                        >
+                            {level}
+                        </button>
+                    {/each}
+                </div>
+            {/if}
         </section>
 
         {#if availableAddOns.length > 0}
@@ -190,6 +206,19 @@
         background: var(--color-primary);
         color: white;
         border-color: var(--color-primary);
+    }
+
+    .option-btn.ice-btn.selected {
+        background: var(--ice-color);
+        color: var(--ice-text);
+        border-color: var(--ice-color);
+    }
+
+    .option-btn.ice-btn.hot {
+        background: #fbe9e7;
+        color: #d84315;
+        border-color: #e64a19;
+        cursor: default;
     }
 
     .footer {

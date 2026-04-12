@@ -8,6 +8,7 @@
         orderId,
         tip,
         total,
+        pointsEarned = 0,
         onnewsale,
         onclose
     }: {
@@ -15,6 +16,7 @@
         orderId: number;
         tip: number;
         total: number;
+        pointsEarned?: number;
         onnewsale: () => void;
         onclose: () => void;
     } = $props();
@@ -98,6 +100,12 @@
                 <span>Total</span>
                 <span>{formatCurrency(total)}</span>
             </div>
+            {#if pointsEarned > 0}
+                <div class="row points">
+                    <span>Points Earned</span>
+                    <span>+{pointsEarned}</span>
+                </div>
+            {/if}
         </div>
 
         {#if receiptStatus === 'idle'}
@@ -169,6 +177,11 @@
         font-weight: 700;
         margin-top: 0.25rem;
         padding-top: 0.5rem;
+    }
+
+    .row.points {
+        color: var(--color-primary);
+        font-weight: 600;
     }
 
     .receipt-label {

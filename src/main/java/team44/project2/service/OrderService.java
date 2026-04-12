@@ -69,6 +69,20 @@ public class OrderService {
             ORDER BY timestamp DESC
             LIMIT 10
         """;
+    private static final String ADD_REWARD_POINTS = """
+            UPDATE customers
+            SET reward_points = reward_points + ?
+            WHERE customer_id = ?
+            """;
+
+    private static final String DEDUCT_REWARD_POINTS = """
+            UPDATE customers
+            SET reward_points = reward_points - ?
+            WHERE customer_id = ? AND reward_points >= ?
+            """;
+
+    private static final int POINTS_PER_REDEEM = 10;
+
     @Inject
     DataSource dataSource;
 
@@ -90,11 +104,22 @@ public class OrderService {
             Integer customerId,
             String paymentMethod,
             BigDecimal tipAmount,
-            List<CartItem> cart
+            List<CartItem> cart,
+            List<Integer> redeemedIndices
     ) {
         BigDecimal totalPrice = cart.stream()
                 .map(CartItem::totalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Calculate discount: base price of each redeemed item (add-ons still charged)
+        BigDecimal redeemDiscount = BigDecimal.ZERO;
+        java.util.Set<Integer> redeemedSet = new java.util.HashSet<>(redeemedIndices);
+        for (int idx : redeemedSet) {
+            if (idx >= 0 && idx < cart.size()) {
+                redeemDiscount = redeemDiscount.add(cart.get(idx).item().basePrice());
+            }
+        }
+        BigDecimal chargedPrice = totalPrice.subtract(redeemDiscount);
 
         try (Connection conn = dataSource.getConnection()) {
             conn.setAutoCommit(false);
@@ -102,7 +127,7 @@ public class OrderService {
             try {
                 int orderId = insertOrder(
                         conn, employeeId, customerId,
-                        totalPrice, tipAmount, paymentMethod
+                        chargedPrice, tipAmount, paymentMethod
                 );
 
                 for (CartItem cartItem : cart) {
@@ -115,12 +140,27 @@ public class OrderService {
                     }
                 }
 
+                // Deduct points for redeemed items
+                int pointsToDeduct = redeemedSet.size() * POINTS_PER_REDEEM;
+                if (customerId != null && pointsToDeduct > 0) {
+                    deductRewardPoints(conn, customerId, pointsToDeduct);
+                }
+
+                // Earn points based on amount actually paid (after discount)
+                int pointsEarned = 0;
+                if (customerId != null) {
+                    pointsEarned = chargedPrice.divideToIntegralValue(BigDecimal.valueOf(5)).intValue();
+                    if (pointsEarned > 0) {
+                        addRewardPoints(conn, customerId, pointsEarned);
+                    }
+                }
+
                 conn.commit();
 
                 return new Order(
                         orderId, employeeId, customerId,
-                        LocalDateTime.now(), totalPrice,
-                        tipAmount, paymentMethod
+                        LocalDateTime.now(), chargedPrice,
+                        tipAmount, paymentMethod, pointsEarned
                 );
             } catch (Exception e) {
                 conn.rollback();
@@ -295,3 +335,24 @@ public class OrderService {
     }
 }
 
+
+    private void addRewardPoints(Connection conn, int customerId, int points) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(ADD_REWARD_POINTS)) {
+            stmt.setInt(1, points);
+            stmt.setInt(2, customerId);
+            stmt.executeUpdate();
+        }
+    }
+
+    private void deductRewardPoints(Connection conn, int customerId, int points) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(DEDUCT_REWARD_POINTS)) {
+            stmt.setInt(1, points);
+            stmt.setInt(2, customerId);
+            stmt.setInt(3, points);
+            int updated = stmt.executeUpdate();
+            if (updated == 0) {
+                throw new SQLException("Insufficient reward points for redemption");
+            }
+        }
+    }
+}

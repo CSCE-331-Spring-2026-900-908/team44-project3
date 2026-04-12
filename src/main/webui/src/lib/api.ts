@@ -253,3 +253,19 @@ export async function createRestockOrder(
         body: JSON.stringify({ employeeId, inventoryId, quantity })
     });
 }
+
+//display
+export async function getKitchenOrders() {
+    const res = await fetch('/api/display/kitchen');
+    return await res.json();
+}
+
+export async function getPickupOrders() {
+    const res = await fetch('/api/display/pickup');
+    return await res.json();
+}
+
+export async function getMenu() {
+    const res = await fetch('/api/menu');
+    return await res.json();
+}

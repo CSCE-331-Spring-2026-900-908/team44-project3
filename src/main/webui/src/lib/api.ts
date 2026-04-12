@@ -254,18 +254,16 @@ export async function createRestockOrder(
     });
 }
 
-//display
-export async function getKitchenOrders() {
-    const res = await fetch('/api/display/kitchen');
-    return await res.json();
+// Display
+
+export async function getKitchenOrders(): Promise<any[]> {
+    return request<any[]>('/display/kitchen');
 }
 
-export async function getPickupOrders() {
-    const res = await fetch('/api/display/pickup');
-    return await res.json();
+export async function getPickupOrders(): Promise<any[]> {
+    return request<any[]>('/display/pickup');
 }
 
-export async function getMenu() {
-    const res = await fetch('/api/menu');
-    return await res.json();
+export async function getDisplayMenu(): Promise<MenuItem[]> {
+    return request<MenuItem[]>('/display/menu');
 }

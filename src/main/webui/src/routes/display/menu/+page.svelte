@@ -5,7 +5,12 @@
     let items = [];
 
     async function load() {
-        items = await getMenu();
+        try{
+            items = await getMenu();
+            console.log("menu:", items);
+        } catch {
+            items = [];
+        }
     }
 
     onMount(() => {

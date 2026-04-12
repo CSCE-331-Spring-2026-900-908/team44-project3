@@ -1,4 +1,4 @@
-package team44.project3.controller;
+package team44.project2.controller;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;

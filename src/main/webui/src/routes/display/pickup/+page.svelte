@@ -5,7 +5,12 @@
     let orders = [];
 
     async function load() {
-        orders = await getPickupOrders();
+        try {
+            orders = await getPickupOrders();
+            console.log("pickup orders:", orders);
+        } catch {
+            orders = [];
+        }
     }
 
     onMount(() => {

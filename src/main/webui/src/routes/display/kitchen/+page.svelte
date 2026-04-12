@@ -7,6 +7,7 @@
     async function load() {
         try {
             orders = await getKitchenOrders();
+            console.log("kitchen orders:", orders);
         } catch {
             orders = [];
         }

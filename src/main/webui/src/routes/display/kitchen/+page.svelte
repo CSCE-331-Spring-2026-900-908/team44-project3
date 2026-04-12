@@ -25,10 +25,11 @@
     <div class="grid">
         {#each orders as order}
             <div class="card">
-                <h2>#{order.id}</h2>
-
-                {#each order.items as item}
-                    <div>{item.name}</div>
+                {#each orders as order}
+                    <div class="card">
+                        <h2>#{order.orderId}</h2>
+                        <div>{order.item}</div>
+                    </div>
                 {/each}
             </div>
         {/each}

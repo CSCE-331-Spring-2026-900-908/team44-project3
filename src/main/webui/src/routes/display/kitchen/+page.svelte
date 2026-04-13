@@ -2,13 +2,14 @@
     import { onMount } from 'svelte';
     import { getKitchenOrders } from '$lib/api';
 
-    let orders = [];
+    let orders = $state<any[]>([]);
 
     async function load() {
         try {
             orders = await getKitchenOrders();
             console.log("kitchen orders:", orders);
-        } catch {
+        } catch (e) {
+            console.error("kitchen load failed:", e);
             orders = [];
         }
     }
@@ -23,12 +24,52 @@
 <div class="screen">
     <h1>Kitchen Orders</h1>
 
-    <div class="grid">
-        {#each orders as order}
-            <div class="card">
-                <h2>#{order.orderId}</h2>
-                <div>{order.item}</div>
-            </div>
-        {/each}
-    </div>
+    {#if orders.length === 0}
+        <p class="empty">No orders in the last 2 minutes.</p>
+    {:else}
+        <div class="grid">
+            {#each orders as order}
+                <div class="card">
+                    <div class="order-id">#{order.orderId}</div>
+                    <div class="item-name">{order.item}</div>
+                </div>
+            {/each}
+        </div>
+    {/if}
 </div>
+
+<style>
+.screen {
+    padding: 2rem;
+    background: var(--color-bg, #f8f4f0);
+    min-height: 100vh;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+.card {
+    background: var(--color-surface, #fff);
+    border-radius: var(--radius, 8px);
+    box-shadow: var(--shadow, 0 2px 8px rgba(0,0,0,0.08));
+    padding: 1.5rem;
+    text-align: center;
+}
+.order-id {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 0.5rem;
+}
+.item-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+.empty {
+    margin-top: 3rem;
+    text-align: center;
+    color: #888;
+    font-size: 1.1rem;
+}
+</style>

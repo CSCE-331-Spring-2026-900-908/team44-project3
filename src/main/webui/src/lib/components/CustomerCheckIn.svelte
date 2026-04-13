@@ -7,12 +7,14 @@
         open,
         mode = 'phone',
         highContrast = false,
+        magnifierOn = false,
         onclose,
         onconfirm
     }: {
         open: boolean;
         mode?: 'phone' | 'email';
         highContrast?: boolean;
+        magnifierOn?: boolean;
         onclose: () => void;
         onconfirm: (customer: Customer) => void;
     } = $props();
@@ -72,7 +74,7 @@
 </script>
 
 <Modal {open} title={mode === 'phone' ? 'Customer Check-In' : 'Sign In'} onclose={cancel} highContrast={highContrast}>
-    <div class="checkin-form" class:high-contrast={highContrast}>
+    <div class="checkin-form" class:high-contrast={highContrast} class:magnifier-on={magnifierOn}>
         <div class="search-row">
             {#if mode === 'phone'}
                 <input
@@ -193,5 +195,37 @@
 
     .checkin-form.high-contrast .error-text {
         color: blue;
+    }
+
+    /* magnificado */
+    .checkin-form.magnifier-on {
+        gap: 1.25rem;
+    }
+
+    .checkin-form.magnifier-on input,
+    .checkin-form.magnifier-on select {
+        font-size: 1rem;
+        padding: 0.85rem 1rem;
+    }
+
+    .checkin-form.magnifier-on .customer-info {
+        padding: 1.25rem;
+        font-size: 1rem;
+    }
+
+    .checkin-form.magnifier-on .customer-info p {
+        font-size: 1rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .checkin-form.magnifier-on .btn-primary,
+    .checkin-form.magnifier-on .btn-secondary,
+    .checkin-form.magnifier-on .btn-ghost {
+        font-size: 1rem;
+        padding: 0.85rem 1.25rem;
+    }
+
+    .checkin-form.magnifier-on .error-text {
+        font-size: 1rem;
     }
 </style>

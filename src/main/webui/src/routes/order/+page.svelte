@@ -40,6 +40,7 @@
     let showConfirmExit = $state(false);
 
     let highContrast = $state(false);
+    let magnifierOn = $state(false);
 
     let completedOrderId = $state(0);
     let completedTip = $state(0);
@@ -117,6 +118,10 @@
 
         if (event.key === 'c' || event.key === 'C') {
             highContrast = !highContrast;
+        }
+
+        if (event.key === 'm' || event.key === 'M') {
+            magnifierOn = !magnifierOn;
         }
     }
 
@@ -242,7 +247,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="order-page" class:high-contrast={highContrast} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
+<div class="order-page" class:high-contrast={highContrast} class:magnifier-on={magnifierOn} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
     <!-- Header -->
     <header class="order-header">
         <div class="header-left">
@@ -1247,7 +1252,7 @@
 }
 
 .order-page.high-contrast .cat-pill.active {
-    background: #ffff00; /* yellow */
+    background: #ffff00;
     color: #000;
     border-color: #ffff00;
 }
@@ -1255,4 +1260,85 @@
 .order-page.high-contrast .cat-pill.active .cat-label {
     color: #000;
 }
+
+    /* ── Screen Magnifier ── */
+    .order-page.magnifier-on {
+        font-size: 1.2em;
+    }
+
+    .order-page.magnifier-on .hero-text h2 {
+        font-size: 2rem;
+    }
+
+    .order-page.magnifier-on .hero-text p,
+    .order-page.magnifier-on .welcome-text,
+    .order-page.magnifier-on .cat-label,
+    .order-page.magnifier-on .muted-text,
+    .order-page.magnifier-on .cart-empty,
+    .order-page.magnifier-on .cart-card-details,
+    .order-page.magnifier-on .summary-line,
+    .order-page.magnifier-on .idle-text {
+        font-size: 1rem;
+    }
+
+    .order-page.magnifier-on .section-title,
+    .order-page.magnifier-on .cart-title,
+    .order-page.magnifier-on .idle-title {
+        font-size: 1.75rem;
+    }
+
+    .order-page.magnifier-on .header-btn,
+    .order-page.magnifier-on .pay-btn,
+    .order-page.magnifier-on .reset-btn,
+    .order-page.magnifier-on .redeem-toggle,
+    .order-page.magnifier-on .confirm-exit-btn,
+    .order-page.magnifier-on .cat-pill,
+    .order-page.magnifier-on .item-card,
+    .order-page.magnifier-on .cart-card {
+        font-size: 1rem;
+    }
+
+    .order-page.magnifier-on .item-name,
+    .order-page.magnifier-on .cart-card-name {
+        font-size: 1.1rem;
+    }
+
+    .order-page.magnifier-on .item-price,
+    .order-page.magnifier-on .cart-card-price,
+    .order-page.magnifier-on .total-line {
+        font-size: 1.2rem;
+    }
+
+    .order-page.magnifier-on .item-icon,
+    .order-page.magnifier-on .cart-card-icon,
+    .order-page.magnifier-on .hero-emoji {
+        transform: scale(1.15);
+    }
+
+    .order-page.magnifier-on .header-btn,
+    .order-page.magnifier-on .pay-btn,
+    .order-page.magnifier-on .reset-btn,
+    .order-page.magnifier-on .redeem-toggle,
+    .order-page.magnifier-on .confirm-exit-btn {
+        padding: 0.75rem 1.25rem;
+    }
+
+    .order-page.magnifier-on .cat-pill {
+        min-width: 96px;
+        padding: 1rem 0.75rem;
+    }
+
+    .order-page.magnifier-on .item-card {
+        padding: 1.5rem;
+    }
+
+    .order-page.magnifier-on .cart-card {
+        padding: 1rem;
+    }
+
+    .order-page.magnifier-on .cart-remove {
+        width: 32px;
+        height: 32px;
+        font-size: 1.2rem;
+    }
 </style>

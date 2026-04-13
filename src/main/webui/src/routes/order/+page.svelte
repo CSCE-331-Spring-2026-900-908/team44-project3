@@ -10,6 +10,7 @@
     import CustomerCheckIn from '$lib/components/CustomerCheckIn.svelte';
     import PaymentModal from '$lib/components/PaymentModal.svelte';
     import TransactionComplete from '$lib/components/TransactionComplete.svelte';
+    import Chatbot from '$lib/components/Chatbot.svelte';
 
     const categoryEmojis: Record<string, string> = {
         milk_tea: '\u{1F95B}',
@@ -418,6 +419,9 @@
     onnewsale={newSale}
     onclose={() => (showComplete = false)}
 />
+
+<!-- Chatbot UI (floating) -->
+<Chatbot />
 
 <style>
     /* ── Page ── */

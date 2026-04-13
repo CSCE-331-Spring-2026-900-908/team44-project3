@@ -11,6 +11,8 @@
         customer,
         redeemedIndices = new Set<number>(),
         employeeId = getEmployeeId(),
+        highContrast = false,
+        magnifierOn = false,
         onclose,
         oncomplete
     }: {
@@ -19,6 +21,8 @@
         customer: Customer | null;
         redeemedIndices?: Set<number>;
         employeeId?: number | null;
+        highContrast?: boolean;
+        magnifierOn?: boolean;
         onclose: () => void;
         oncomplete: (orderId: number, tip: number, total: number, pointsEarned: number) => void;
     } = $props();
@@ -97,8 +101,8 @@
     }
 </script>
 
-<Modal {open} title="Payment" {onclose}>
-    <div class="payment-flow">
+<Modal {open} title="Payment" {onclose} highContrast={highContrast}>
+    <div class="payment-flow" class:high-contrast={highContrast} class:magnifier-on={magnifierOn}>
         {#if step === 'method'}
             <p class="step-label">Select Payment Method</p>
             <div class="method-grid">
@@ -275,5 +279,121 @@
         display: flex;
         justify-content: flex-end;
         gap: 0.5rem;
+    }
+
+    /* high contrast */
+        .payment-flow.high-contrast {
+        color: #fff;
+    }
+
+    
+    
+    .payment-flow.high-contrast .summary-row span,
+    .payment-flow.high-contrast h2,
+    .payment-flow.high-contrast h3,
+    .payment-flow.high-contrast span,
+    .payment-flow.high-contrast label,
+    .payment-flow.high-contrast small {
+        color: white;
+    }
+    .payment-flow.high-contrast .subtotal-label,
+    .payment-flow.high-contrast .step-label,
+    .payment-flow.high-contrast p,
+    .payment-flow.high-contrast .order-id{
+        color: black;
+    }
+
+    .payment-flow.high-contrast .method-btn,
+    .payment-flow.high-contrast .btn-primary,
+    .payment-flow.high-contrast .btn-secondary,
+    .payment-flow.high-contrast .btn-ghost,
+    .payment-flow.high-contrast input,
+    .payment-flow.high-contrast select,
+    .payment-flow.high-contrast textarea {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        box-shadow: none;
+    }
+
+    .payment-flow.high-contrast .method-btn:hover,
+    .payment-flow.high-contrast .btn-primary:hover,
+    .payment-flow.high-contrast .btn-secondary:hover,
+    .payment-flow.high-contrast .btn-ghost:hover {
+        background: blue;
+        color: #fff;
+    }
+
+    .payment-flow.high-contrast .method-btn small {
+        color: yellow;
+    }
+
+    .payment-flow.high-contrast .method-btn small:hover {
+        color: #fff;
+    }
+
+    .payment-flow.high-contrast .confirm-summary {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        box-shadow: none;
+    }
+
+    .payment-flow.high-contrast .discount-row {
+        color: blue;
+    }
+
+    .payment-flow.high-contrast .total-row {
+        border-top: 2px solid #fff;
+    }
+
+    .payment-flow.high-contrast .error-text {
+        color: blue;
+    }
+
+    /* Magnifier */
+    .payment-flow.magnifier-on {
+        gap: 1.25rem;
+    }
+
+    .payment-flow.magnifier-on .step-label {
+        font-size: 1.2rem;
+    }
+
+    .payment-flow.magnifier-on .subtotal-label,
+    .payment-flow.magnifier-on .summary-row {
+        font-size: 1.1rem;
+    }
+
+    .payment-flow.magnifier-on .method-btn {
+        font-size: 1.05rem;
+        padding: 1.2rem;
+    }
+
+    .payment-flow.magnifier-on .method-btn small {
+        font-size: 0.9rem;
+    }
+
+    .payment-flow.magnifier-on input,
+    .payment-flow.magnifier-on select,
+    .payment-flow.magnifier-on textarea {
+        font-size: 1rem;
+        padding: 0.85rem 1rem;
+    }
+
+    .payment-flow.magnifier-on .confirm-summary {
+        padding: 1.25rem;
+    }
+
+    .payment-flow.magnifier-on .total-row {
+        font-size: 1.2rem;
+    }
+
+    .payment-flow.magnifier-on .btn-primary,
+    .payment-flow.magnifier-on .btn-secondary,
+    .payment-flow.magnifier-on .btn-ghost,
+    .payment-flow.magnifier-on .btn-lg {
+        font-size: 1rem;
+        padding: 0.85rem 1.25rem;
     }
 </style>

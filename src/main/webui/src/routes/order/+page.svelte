@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { MenuItem, CartItem, Customer } from '$lib/types';
-    import { onDestroy } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { getCategories, getItemsByCategory } from '$lib/api';
@@ -38,6 +38,9 @@
     let showComplete = $state(false);
     let showConfirmReset = $state(false);
     let showConfirmExit = $state(false);
+
+    let highContrast = $state(false);
+    let magnifierOn = $state(false);
 
     let completedOrderId = $state(0);
     let completedTip = $state(0);
@@ -101,12 +104,51 @@
         void goto(resolve('/'));
     }
 
+    function handleGlobalKeydown(event: KeyboardEvent) {
+        const target = event.target as HTMLElement | null;
+        const tag = target?.tagName;
+
+        const isTypingField =
+            tag === 'INPUT' ||
+            tag === 'TEXTAREA' ||
+            tag === 'SELECT' ||
+            target?.isContentEditable;
+
+        if (isTypingField) return;
+
+        if (event.key === 'c' || event.key === 'C') {
+            highContrast = !highContrast;
+        }
+
+        if (event.key === 'm' || event.key === 'M') {
+            magnifierOn = !magnifierOn;
+        }
+    }
+
+    function handleGlobalPointer() {
+        resetIdle();
+    }
+
     $effect(() => {
         startIdleTimer();
     });
 
     onDestroy(() => {
         clearIdleTimer();
+    });
+
+    onMount(() => {
+        window.addEventListener('keydown', handleGlobalKeydown);
+        window.addEventListener('pointerdown', handleGlobalPointer);
+        window.addEventListener('mousemove', resetIdle);
+        window.addEventListener('touchstart', handleGlobalPointer);
+
+        return () => {
+            window.removeEventListener('keydown', handleGlobalKeydown);
+            window.removeEventListener('pointerdown', handleGlobalPointer);
+            window.removeEventListener('mousemove', resetIdle);
+            window.removeEventListener('touchstart', handleGlobalPointer);
+        };
     });
 
     $effect(() => {
@@ -205,7 +247,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="order-page" onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
+<div class="order-page" class:high-contrast={highContrast} class:magnifier-on={magnifierOn} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
     <!-- Header -->
     <header class="order-header">
         <div class="header-left">
@@ -462,6 +504,8 @@
 <ItemCustomization
     open={showCustomize}
     item={customizeItem}
+    highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onclose={() => (showCustomize = false)}
     onadd={addToCart}
 />
@@ -469,6 +513,8 @@
 <CustomerCheckIn
     open={showCheckIn}
     mode="email"
+    highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onclose={() => (showCheckIn = false)}
     onconfirm={handleCustomerConfirm}
 />
@@ -479,6 +525,8 @@
     {customer}
     {redeemedIndices}
     employeeId={null}
+    highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onclose={() => (showPayment = false)}
     oncomplete={handlePaymentComplete}
 />
@@ -489,6 +537,8 @@
     tip={completedTip}
     total={completedTotal}
     pointsEarned={completedPointsEarned}
+    highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onnewsale={newSale}
     onclose={() => (showComplete = false)}
 />
@@ -1076,5 +1126,223 @@
     @keyframes pulse-glow {
         0%, 100% { box-shadow: 0 0 0 0 rgba(230, 81, 0, 0.2); }
         50% { box-shadow: 0 0 8px 2px rgba(230, 81, 0, 0.3); }
+    }
+
+        /* ── High Contrast ── */
+    .order-page.high-contrast {
+        background: #000;
+        color: #fff;
+    }
+
+    .order-page.high-contrast .order-header,
+    .order-page.high-contrast .cart-panel,
+    .order-page.high-contrast .cat-pill,
+    .order-page.high-contrast .item-card,
+    .order-page.high-contrast .cart-card,
+    .order-page.high-contrast .idle-card,
+    .order-page.high-contrast .hero-banner {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        box-shadow: none;
+    }
+
+    .order-page.high-contrast .order-header {
+        border-bottom: 2px solid #fff;
+    }
+
+    .order-page.high-contrast .cart-panel {
+        border-left: 2px solid #fff;
+    }
+
+    .order-page.high-contrast .cart-summary,
+    .order-page.high-contrast .total-line,
+    .order-page.high-contrast .modal-header {
+        border-color: #fff;
+    }
+
+    .order-page.high-contrast .order-header h1,
+    .order-page.high-contrast .welcome-text,
+    .order-page.high-contrast .points-badge,
+    .order-page.high-contrast .cat-label,
+    .order-page.high-contrast .section-title,
+    .order-page.high-contrast .item-name,
+    .order-page.high-contrast .cart-title,
+    .order-page.high-contrast .cart-card-name,
+    .order-page.high-contrast .summary-line,
+    .order-page.high-contrast .total-line,
+    .order-page.high-contrast .idle-title,
+    .order-page.high-contrast .idle-text,
+    .order-page.high-contrast .muted-text,
+    .order-page.high-contrast .cart-empty,
+    .order-page.high-contrast .cart-card-details,
+    .order-page.high-contrast .price-struck,
+    .order-page.high-contrast .hero-text p,
+    .order-page.high-contrast .hero-text h2 {
+        color: #fff;
+    }
+
+    .order-page.high-contrast .header-btn,
+    .order-page.high-contrast .pay-btn,
+    .order-page.high-contrast .reset-btn,
+    .order-page.high-contrast .redeem-toggle,
+    .order-page.high-contrast .cart-remove,
+    .order-page.high-contrast .confirm-exit-btn,
+    .order-page.high-contrast .btn-primary,
+    .order-page.high-contrast .btn-ghost {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+    }
+
+    .order-page.high-contrast .header-btn:hover,
+    .order-page.high-contrast .pay-btn:hover:not(:disabled),
+    .order-page.high-contrast .reset-btn:hover,
+    .order-page.high-contrast .redeem-toggle:hover:not(:disabled),
+    .order-page.high-contrast .cart-remove:hover,
+    .order-page.high-contrast .confirm-exit-btn:hover,
+    .order-page.high-contrast .btn-primary:hover,
+    .order-page.high-contrast .btn-ghost:hover {
+        background: #fff;
+        color: #000;
+        transform: none;
+        opacity: 1;
+    }
+
+    .order-page.high-contrast .cat-pill.active{
+        background-color: yellow;
+    }
+
+    .order-page.high-contrast .redeem-toggle.active,
+    .order-page.high-contrast .points-badge,
+    .order-page.high-contrast .points-badge.points-redeemable,
+    .order-page.high-contrast .free-drink-banner,
+    .order-page.high-contrast .cart-discount-banner,
+    .order-page.high-contrast .redeem-label,
+    .order-page.high-contrast .cart-card.redeemed {
+        background: #fff;
+        color: #000;
+        border-color: #fff;
+        animation: none;
+        box-shadow: none;
+    }
+
+    .order-page.high-contrast .item-price,
+    .order-page.high-contrast .cart-card-price,
+    .order-page.high-contrast .sold-out,
+    .order-page.high-contrast .discount-line,
+    .order-page.high-contrast .tax-line {
+        color: #fff;
+    }
+
+    .order-page.high-contrast .add-icon {
+        background: #fff;
+        color: #000;
+    }
+
+    .order-page.high-contrast .idle-overlay {
+        background: rgba(0, 0, 0, 0.9);
+    }
+
+
+.order-page.high-contrast .cat-pill {
+    background: #000;
+    color: #fff;
+    border: 2px solid #fff;
+}
+
+.order-page.high-contrast .cat-pill .cat-label {
+    color: #fff;
+}
+
+.order-page.high-contrast .cat-pill.active {
+    background: #ffff00;
+    color: #000;
+    border-color: #ffff00;
+}
+
+.order-page.high-contrast .cat-pill.active .cat-label {
+    color: #000;
+}
+
+    /* ── Screen Magnifier ── */
+    .order-page.magnifier-on {
+        font-size: 1.2em;
+    }
+
+    .order-page.magnifier-on .hero-text h2 {
+        font-size: 2rem;
+    }
+
+    .order-page.magnifier-on .hero-text p,
+    .order-page.magnifier-on .welcome-text,
+    .order-page.magnifier-on .cat-label,
+    .order-page.magnifier-on .muted-text,
+    .order-page.magnifier-on .cart-empty,
+    .order-page.magnifier-on .cart-card-details,
+    .order-page.magnifier-on .summary-line,
+    .order-page.magnifier-on .idle-text {
+        font-size: 1rem;
+    }
+
+    .order-page.magnifier-on .section-title,
+    .order-page.magnifier-on .cart-title,
+    .order-page.magnifier-on .idle-title {
+        font-size: 1.75rem;
+    }
+
+    .order-page.magnifier-on .header-btn,
+    .order-page.magnifier-on .pay-btn,
+    .order-page.magnifier-on .reset-btn,
+    .order-page.magnifier-on .redeem-toggle,
+    .order-page.magnifier-on .confirm-exit-btn,
+    .order-page.magnifier-on .cat-pill,
+    .order-page.magnifier-on .item-card,
+    .order-page.magnifier-on .cart-card {
+        font-size: 1rem;
+    }
+
+    .order-page.magnifier-on .item-name,
+    .order-page.magnifier-on .cart-card-name {
+        font-size: 1.1rem;
+    }
+
+    .order-page.magnifier-on .item-price,
+    .order-page.magnifier-on .cart-card-price,
+    .order-page.magnifier-on .total-line {
+        font-size: 1.2rem;
+    }
+
+    .order-page.magnifier-on .item-icon,
+    .order-page.magnifier-on .cart-card-icon,
+    .order-page.magnifier-on .hero-emoji {
+        transform: scale(1.15);
+    }
+
+    .order-page.magnifier-on .header-btn,
+    .order-page.magnifier-on .pay-btn,
+    .order-page.magnifier-on .reset-btn,
+    .order-page.magnifier-on .redeem-toggle,
+    .order-page.magnifier-on .confirm-exit-btn {
+        padding: 0.75rem 1.25rem;
+    }
+
+    .order-page.magnifier-on .cat-pill {
+        min-width: 96px;
+        padding: 1rem 0.75rem;
+    }
+
+    .order-page.magnifier-on .item-card {
+        padding: 1.5rem;
+    }
+
+    .order-page.magnifier-on .cart-card {
+        padding: 1rem;
+    }
+
+    .order-page.magnifier-on .cart-remove {
+        width: 32px;
+        height: 32px;
+        font-size: 1.2rem;
     }
 </style>

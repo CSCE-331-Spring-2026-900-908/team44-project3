@@ -505,6 +505,7 @@
     open={showCustomize}
     item={customizeItem}
     highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onclose={() => (showCustomize = false)}
     onadd={addToCart}
 />
@@ -513,6 +514,7 @@
     open={showCheckIn}
     mode="email"
     highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onclose={() => (showCheckIn = false)}
     onconfirm={handleCustomerConfirm}
 />
@@ -524,6 +526,7 @@
     {redeemedIndices}
     employeeId={null}
     highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onclose={() => (showPayment = false)}
     oncomplete={handlePaymentComplete}
 />
@@ -535,6 +538,7 @@
     total={completedTotal}
     pointsEarned={completedPointsEarned}
     highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onnewsale={newSale}
     onclose={() => (showComplete = false)}
 />

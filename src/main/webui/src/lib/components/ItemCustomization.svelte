@@ -8,12 +8,14 @@
         open,
         item,
         highContrast = false,
+        magnifierOn = false,
         onclose,
         onadd
     }: {
         open: boolean;
         item: MenuItem | null;
         highContrast?: boolean;
+        magnifierOn?: boolean;
         onclose: () => void;
         onadd: (cartItem: CartItem) => void;
     } = $props();
@@ -82,8 +84,8 @@
     }
 </script>
 
-<Modal {open} title={item ? toTitleCase(item.name) : 'Customize'} {onclose} wide highContrast={highContrast}>
-    <div class="customize-form" class:high-contrast={highContrast}>
+<Modal {open} title={item ? toTitleCase(item.name) : 'Customize'} {onclose} wide highContrast={highContrast} magnifierOn={magnifierOn}>
+    <div class="customize-form" class:high-contrast={highContrast} class:magnifier-on={magnifierOn}>
         <section>
             <h4>Size</h4>
             <div class="option-row">
@@ -237,54 +239,81 @@
     }
 
     .customize-form.high-contrast {
-    color: #fff;
-}
+        color: #fff;
+    }
 
-.customize-form.high-contrast section h4 {
-    color: #000;
-}
+    .customize-form.high-contrast section h4 {
+        color: #000;
+    }
 
-.customize-form.high-contrast .option-btn {
-    background: #000;
-    color: #fff;
-    border: 2px solid #fff;
-    box-shadow: none;
-}
+    .customize-form.high-contrast .option-btn {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        box-shadow: none;
+    }
 
-.customize-form.high-contrast .option-btn:hover {
-    background: yellow;
-    color: #000;
-    border-color: #fff;
-}
+    .customize-form.high-contrast .option-btn:hover {
+        background: yellow;
+        color: #000;
+        border-color: #fff;
+    }
 
-.customize-form.high-contrast .option-btn.selected {
-    background: #ffff00;
-    color: #000;
-    border-color: #ffff00;
-}
+    .customize-form.high-contrast .option-btn.selected {
+        background: #ffff00;
+        color: #000;
+        border-color: #ffff00;
+    }
 
-.customize-form.high-contrast .footer {
-    border-top: 2px solid #fff;
-}
+    .customize-form.high-contrast .footer {
+        border-top: 2px solid #fff;
+    }
 
-.customize-form.high-contrast .total {
-    color: #fff;
-}
+    .customize-form.high-contrast .total {
+        color: black;
+    }
 
-.customize-form.high-contrast .btn-primary,
-.customize-form.high-contrast .btn-secondary,
-.customize-form.high-contrast .btn-ghost,
-.customize-form.high-contrast .btn-lg {
-    background: #000;
-    color: #fff;
-    border: 2px solid #fff;
-}
+    .customize-form.high-contrast .btn-primary,
+    .customize-form.high-contrast .btn-secondary,
+    .customize-form.high-contrast .btn-ghost,
+    .customize-form.high-contrast .btn-lg {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+    }
 
-.customize-form.high-contrast .btn-primary:hover,
-.customize-form.high-contrast .btn-secondary:hover,
-.customize-form.high-contrast .btn-ghost:hover,
-.customize-form.high-contrast .btn-lg:hover {
-    background: #fff;
-    color: #000;
-}
+    .customize-form.high-contrast .btn-primary:hover,
+    .customize-form.high-contrast .btn-secondary:hover,
+    .customize-form.high-contrast .btn-ghost:hover,
+    .customize-form.high-contrast .btn-lg:hover {
+        background: #fff;
+        color: #000;
+    }
+
+
+    /* Magnifier */
+    .customize-form.magnifier-on {
+        gap: 1.5rem;
+    }
+
+    .customize-form.magnifier-on section h4 {
+        font-size: 1rem;
+    }
+
+    .customize-form.magnifier-on .option-btn {
+        padding: 0.75rem 1.2rem;
+        font-size: 1rem;
+    }
+
+    .customize-form.magnifier-on .total {
+        font-size: 1.5rem;
+    }
+
+    .customize-form.magnifier-on .btn-primary,
+    .customize-form.magnifier-on .btn-secondary,
+    .customize-form.magnifier-on .btn-ghost,
+    .customize-form.magnifier-on .btn-lg {
+        font-size: 1rem;
+        padding: 0.85rem 1.25rem;
+    }
 </style>

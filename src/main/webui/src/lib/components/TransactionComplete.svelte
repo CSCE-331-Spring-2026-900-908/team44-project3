@@ -9,6 +9,7 @@
         tip,
         total,
         pointsEarned = 0,
+        highContrast = false,
         onnewsale,
         onclose
     }: {
@@ -17,6 +18,7 @@
         tip: number;
         total: number;
         pointsEarned?: number;
+        highContrast?: boolean;
         onnewsale: () => void;
         onclose: () => void;
     } = $props();
@@ -80,8 +82,8 @@
     }
 </script>
 
-<Modal {open} title="Thank You!" {onclose}>
-    <div class="complete-content">
+<Modal {open} title="Thank You!" {onclose} highContrast={highContrast}>
+    <div class="complete-content" class:high-contrast={highContrast}>
         <div class="checkmark">&#10003;</div>
 
         <p class="thank-you">Thank you for your purchase!</p>
@@ -212,5 +214,74 @@
         color: var(--color-success);
         font-weight: 600;
         font-size: 0.9rem;
+    }
+
+    /* ── High Contrast ── */
+    .complete-content.high-contrast {
+        color: #fff;
+    }
+
+    .complete-content.high-contrast .checkmark {
+        background: #ffff00;
+        color: #000;
+    }
+
+    .complete-content.high-contrast .thank-you {
+        color: black;
+    }
+
+    .complete-content.high-contrast .order-id {
+        color: #000;
+    }
+
+    .complete-content.high-contrast .summary,
+    .complete-content.high-contrast .card {
+        background: #000;
+        color: #000;
+        border: 2px solid #fff;
+        box-shadow: none;
+    }
+
+    .complete-content.high-contrast .row {
+        color: #fff;
+    }
+
+    .complete-content.high-contrast .row.total {
+        border-top: 2px solid #fff;
+    }
+
+    .complete-content.high-contrast .row.points {
+        color: #ffff00;
+    }
+
+    .complete-content.high-contrast .receipt-label,
+    .complete-content.high-contrast .countdown-text {
+        color: black;
+        opacity: 1;
+    }
+
+    .complete-content.high-contrast .receipt-badge {
+        background: #ffff00;
+        color: #000;
+        border: 2px solid #ffff00;
+    }
+
+    .complete-content.high-contrast .btn-primary,
+    .complete-content.high-contrast .btn-secondary,
+    .complete-content.high-contrast .btn-ghost,
+    .complete-content.high-contrast .btn-full,
+    .complete-content.high-contrast .btn-lg {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+    }
+
+    .complete-content.high-contrast .btn-primary:hover,
+    .complete-content.high-contrast .btn-secondary:hover,
+    .complete-content.high-contrast .btn-ghost:hover,
+    .complete-content.high-contrast .btn-full:hover,
+    .complete-content.high-contrast .btn-lg:hover {
+        background: yellow;
+        color: #000;
     }
 </style>

@@ -187,11 +187,11 @@
     .checkin-form.high-contrast .btn-primary:hover,
     .checkin-form.high-contrast .btn-secondary:hover,
     .checkin-form.high-contrast .btn-ghost:hover {
-        background: #fff;
+        background: yellow;
         color: #000;
     }
 
     .checkin-form.high-contrast .error-text {
-        color: #ffff00;
+        color: blue;
     }
 </style>

@@ -284,16 +284,21 @@
         color: #fff;
     }
 
-    .payment-flow.high-contrast .step-label,
-    .payment-flow.high-contrast .subtotal-label,
+    
+    
     .payment-flow.high-contrast .summary-row span,
     .payment-flow.high-contrast h2,
     .payment-flow.high-contrast h3,
-    .payment-flow.high-contrast p,
     .payment-flow.high-contrast span,
     .payment-flow.high-contrast label,
     .payment-flow.high-contrast small {
-        color: #fff;
+        color: white;
+    }
+    .payment-flow.high-contrast .subtotal-label,
+    .payment-flow.high-contrast .step-label,
+    .payment-flow.high-contrast p,
+    .payment-flow.high-contrast .order-id{
+        color: black;
     }
 
     .payment-flow.high-contrast .method-btn,
@@ -313,11 +318,15 @@
     .payment-flow.high-contrast .btn-primary:hover,
     .payment-flow.high-contrast .btn-secondary:hover,
     .payment-flow.high-contrast .btn-ghost:hover {
-        background: yellow;
-        color: #000;
+        background: blue;
+        color: #fff;
     }
 
     .payment-flow.high-contrast .method-btn small {
+        color: yellow;
+    }
+
+    .payment-flow.high-contrast .method-btn small:hover {
         color: #fff;
     }
 
@@ -329,7 +338,7 @@
     }
 
     .payment-flow.high-contrast .discount-row {
-        color: #ffff00;
+        color: blue;
     }
 
     .payment-flow.high-contrast .total-row {
@@ -337,6 +346,6 @@
     }
 
     .payment-flow.high-contrast .error-text {
-        color: #ffff00;
+        color: blue;
     }
 </style>

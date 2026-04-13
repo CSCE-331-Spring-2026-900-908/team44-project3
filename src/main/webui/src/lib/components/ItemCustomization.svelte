@@ -7,11 +7,13 @@
     let {
         open,
         item,
+        highContrast = false,
         onclose,
         onadd
     }: {
         open: boolean;
         item: MenuItem | null;
+        highContrast?: boolean;
         onclose: () => void;
         onadd: (cartItem: CartItem) => void;
     } = $props();
@@ -80,8 +82,8 @@
     }
 </script>
 
-<Modal {open} title={item ? toTitleCase(item.name) : 'Customize'} {onclose} wide>
-    <div class="customize-form">
+<Modal {open} title={item ? toTitleCase(item.name) : 'Customize'} {onclose} wide highContrast={highContrast}>
+    <div class="customize-form" class:high-contrast={highContrast}>
         <section>
             <h4>Size</h4>
             <div class="option-row">
@@ -233,4 +235,56 @@
         font-size: 1.25rem;
         font-weight: 700;
     }
+
+    .customize-form.high-contrast {
+    color: #fff;
+}
+
+.customize-form.high-contrast section h4 {
+    color: #000;
+}
+
+.customize-form.high-contrast .option-btn {
+    background: #000;
+    color: #fff;
+    border: 2px solid #fff;
+    box-shadow: none;
+}
+
+.customize-form.high-contrast .option-btn:hover {
+    background: yellow;
+    color: #000;
+    border-color: #fff;
+}
+
+.customize-form.high-contrast .option-btn.selected {
+    background: #ffff00;
+    color: #000;
+    border-color: #ffff00;
+}
+
+.customize-form.high-contrast .footer {
+    border-top: 2px solid #fff;
+}
+
+.customize-form.high-contrast .total {
+    color: #fff;
+}
+
+.customize-form.high-contrast .btn-primary,
+.customize-form.high-contrast .btn-secondary,
+.customize-form.high-contrast .btn-ghost,
+.customize-form.high-contrast .btn-lg {
+    background: #000;
+    color: #fff;
+    border: 2px solid #fff;
+}
+
+.customize-form.high-contrast .btn-primary:hover,
+.customize-form.high-contrast .btn-secondary:hover,
+.customize-form.high-contrast .btn-ghost:hover,
+.customize-form.high-contrast .btn-lg:hover {
+    background: #fff;
+    color: #000;
+}
 </style>

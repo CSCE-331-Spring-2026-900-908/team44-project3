@@ -3,6 +3,7 @@
     import { resolve } from '$app/paths';
     import { authenticate, getCurrentUser } from '$lib/api';
     import { isManager, restoreSession } from '$lib/stores/auth.svelte';
+    import LanguageSelector from '$lib/components/LanguageSelector.svelte';
 
     let email = $state('');
     let password = $state('');
@@ -53,7 +54,9 @@
     <div class="login-card card">
         <div class="login-header">
             <h1>Team 44 Boba POS</h1>
-            <p class="login-subtitle">Employee Sign In</p>
+            <div class="lang-row">
+                <LanguageSelector />
+            </div>
         </div>
 
         <form onsubmit={handleLogin}>
@@ -120,10 +123,10 @@
         color: var(--color-primary);
     }
 
-    .login-subtitle {
-        font-size: 0.9rem;
-        color: var(--color-text-muted);
-        margin-top: 0.25rem;
+    .lang-row {
+        display: flex;
+        justify-content: center;
+        margin-top: 0.75rem;
     }
 
     form {

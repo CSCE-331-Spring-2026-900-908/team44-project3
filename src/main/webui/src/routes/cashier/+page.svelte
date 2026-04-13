@@ -11,7 +11,8 @@
     import CustomerCheckIn from '$lib/components/CustomerCheckIn.svelte';
     import PaymentModal from '$lib/components/PaymentModal.svelte';
     import TransactionComplete from '$lib/components/TransactionComplete.svelte';
-    
+    import LanguageSelector from '$lib/components/LanguageSelector.svelte';
+
 
     let categories = $state<string[]>([]);
     let selectedCategory = $state('');
@@ -127,6 +128,7 @@
             {/if}
         </div>
         <div class="header-right">
+            <LanguageSelector />
             <span class="employee-name">{getDisplayName()}</span>
             <button class="btn-ghost" onclick={logout}>Logout</button>
         </div>

@@ -3,6 +3,7 @@
     import { resolve } from '$app/paths';
     import { customerCheckin } from '$lib/api';
     import { setCustomer, restoreCustomer } from '$lib/stores/auth.svelte';
+    import LanguageSelector from '$lib/components/LanguageSelector.svelte';
 
     let email = $state('');
     let error = $state('');
@@ -80,7 +81,10 @@
             </button>
         </div>
 
-        <a href={resolve('/login')} class="staff-link">Staff Login</a>
+        <div class="bottom-row">
+            <LanguageSelector openUp />
+            <a href={resolve('/login')} class="staff-link">Staff Login</a>
+        </div>
     </div>
 </div>
 
@@ -166,5 +170,12 @@
 
     .staff-link:hover {
         color: white;
+    }
+
+    .bottom-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
     }
 </style>

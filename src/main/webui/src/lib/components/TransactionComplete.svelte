@@ -10,6 +10,7 @@
         total,
         pointsEarned = 0,
         highContrast = false,
+        magnifierOn = false,
         onnewsale,
         onclose
     }: {
@@ -19,6 +20,7 @@
         total: number;
         pointsEarned?: number;
         highContrast?: boolean;
+        magnifierOn?: boolean;
         onnewsale: () => void;
         onclose: () => void;
     } = $props();
@@ -83,7 +85,7 @@
 </script>
 
 <Modal {open} title="Thank You!" {onclose} highContrast={highContrast}>
-    <div class="complete-content" class:high-contrast={highContrast}>
+    <div class="complete-content" class:high-contrast={highContrast} class:magnifier-on={magnifierOn}>
         <div class="checkmark">&#10003;</div>
 
         <p class="thank-you">Thank you for your purchase!</p>
@@ -283,5 +285,48 @@
     .complete-content.high-contrast .btn-lg:hover {
         background: yellow;
         color: #000;
+    }
+
+    /* magnifier */
+
+    .complete-content.magnifier-on {
+        gap: 1.25rem;
+    }
+
+    .complete-content.magnifier-on .checkmark {
+        width: 68px;
+        height: 68px;
+        font-size: 2.4rem;
+    }
+
+    .complete-content.magnifier-on .thank-you {
+        font-size: 1.5rem;
+    }
+
+    .complete-content.magnifier-on .order-id {
+        font-size: 1.25rem;
+    }
+
+    .complete-content.magnifier-on .summary {
+        padding: 1.25rem;
+    }
+
+    .complete-content.magnifier-on .row {
+        font-size: 1.1rem;
+    }
+
+    .complete-content.magnifier-on .receipt-label,
+    .complete-content.magnifier-on .countdown-text,
+    .complete-content.magnifier-on .receipt-badge {
+        font-size: 1.05rem;
+    }
+
+    .complete-content.magnifier-on .btn-primary,
+    .complete-content.magnifier-on .btn-secondary,
+    .complete-content.magnifier-on .btn-ghost,
+    .complete-content.magnifier-on .btn-full,
+    .complete-content.magnifier-on .btn-lg {
+        font-size: 1rem;
+        padding: 0.85rem 1.25rem;
     }
 </style>

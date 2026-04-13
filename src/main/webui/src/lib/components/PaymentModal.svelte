@@ -12,6 +12,7 @@
         redeemedIndices = new Set<number>(),
         employeeId = getEmployeeId(),
         highContrast = false,
+        magnifierOn = false,
         onclose,
         oncomplete
     }: {
@@ -21,6 +22,7 @@
         redeemedIndices?: Set<number>;
         employeeId?: number | null;
         highContrast?: boolean;
+        magnifierOn?: boolean;
         onclose: () => void;
         oncomplete: (orderId: number, tip: number, total: number, pointsEarned: number) => void;
     } = $props();
@@ -100,7 +102,7 @@
 </script>
 
 <Modal {open} title="Payment" {onclose} highContrast={highContrast}>
-    <div class="payment-flow" class:high-contrast={highContrast}>
+    <div class="payment-flow" class:high-contrast={highContrast} class:magnifier-on={magnifierOn}>
         {#if step === 'method'}
             <p class="step-label">Select Payment Method</p>
             <div class="method-grid">
@@ -347,5 +349,51 @@
 
     .payment-flow.high-contrast .error-text {
         color: blue;
+    }
+
+    /* Magnifier */
+    .payment-flow.magnifier-on {
+        gap: 1.25rem;
+    }
+
+    .payment-flow.magnifier-on .step-label {
+        font-size: 1.2rem;
+    }
+
+    .payment-flow.magnifier-on .subtotal-label,
+    .payment-flow.magnifier-on .summary-row {
+        font-size: 1.1rem;
+    }
+
+    .payment-flow.magnifier-on .method-btn {
+        font-size: 1.05rem;
+        padding: 1.2rem;
+    }
+
+    .payment-flow.magnifier-on .method-btn small {
+        font-size: 0.9rem;
+    }
+
+    .payment-flow.magnifier-on input,
+    .payment-flow.magnifier-on select,
+    .payment-flow.magnifier-on textarea {
+        font-size: 1rem;
+        padding: 0.85rem 1rem;
+    }
+
+    .payment-flow.magnifier-on .confirm-summary {
+        padding: 1.25rem;
+    }
+
+    .payment-flow.magnifier-on .total-row {
+        font-size: 1.2rem;
+    }
+
+    .payment-flow.magnifier-on .btn-primary,
+    .payment-flow.magnifier-on .btn-secondary,
+    .payment-flow.magnifier-on .btn-ghost,
+    .payment-flow.magnifier-on .btn-lg {
+        font-size: 1rem;
+        padding: 0.85rem 1.25rem;
     }
 </style>

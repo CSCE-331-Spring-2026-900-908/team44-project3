@@ -11,6 +11,7 @@
         customer,
         redeemedIndices = new Set<number>(),
         employeeId = getEmployeeId(),
+        highContrast = false,
         onclose,
         oncomplete
     }: {
@@ -19,6 +20,7 @@
         customer: Customer | null;
         redeemedIndices?: Set<number>;
         employeeId?: number | null;
+        highContrast?: boolean;
         onclose: () => void;
         oncomplete: (orderId: number, tip: number, total: number, pointsEarned: number) => void;
     } = $props();
@@ -97,8 +99,8 @@
     }
 </script>
 
-<Modal {open} title="Payment" {onclose}>
-    <div class="payment-flow">
+<Modal {open} title="Payment" {onclose} highContrast={highContrast}>
+    <div class="payment-flow" class:high-contrast={highContrast}>
         {#if step === 'method'}
             <p class="step-label">Select Payment Method</p>
             <div class="method-grid">
@@ -275,5 +277,66 @@
         display: flex;
         justify-content: flex-end;
         gap: 0.5rem;
+    }
+
+    /* high contrast */
+        .payment-flow.high-contrast {
+        color: #fff;
+    }
+
+    .payment-flow.high-contrast .step-label,
+    .payment-flow.high-contrast .subtotal-label,
+    .payment-flow.high-contrast .summary-row span,
+    .payment-flow.high-contrast h2,
+    .payment-flow.high-contrast h3,
+    .payment-flow.high-contrast p,
+    .payment-flow.high-contrast span,
+    .payment-flow.high-contrast label,
+    .payment-flow.high-contrast small {
+        color: #fff;
+    }
+
+    .payment-flow.high-contrast .method-btn,
+    .payment-flow.high-contrast .btn-primary,
+    .payment-flow.high-contrast .btn-secondary,
+    .payment-flow.high-contrast .btn-ghost,
+    .payment-flow.high-contrast input,
+    .payment-flow.high-contrast select,
+    .payment-flow.high-contrast textarea {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        box-shadow: none;
+    }
+
+    .payment-flow.high-contrast .method-btn:hover,
+    .payment-flow.high-contrast .btn-primary:hover,
+    .payment-flow.high-contrast .btn-secondary:hover,
+    .payment-flow.high-contrast .btn-ghost:hover {
+        background: yellow;
+        color: #000;
+    }
+
+    .payment-flow.high-contrast .method-btn small {
+        color: #fff;
+    }
+
+    .payment-flow.high-contrast .confirm-summary {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        box-shadow: none;
+    }
+
+    .payment-flow.high-contrast .discount-row {
+        color: #ffff00;
+    }
+
+    .payment-flow.high-contrast .total-row {
+        border-top: 2px solid #fff;
+    }
+
+    .payment-flow.high-contrast .error-text {
+        color: #ffff00;
     }
 </style>

@@ -6,11 +6,13 @@
     let {
         open,
         mode = 'phone',
+        highContrast = false,
         onclose,
         onconfirm
     }: {
         open: boolean;
         mode?: 'phone' | 'email';
+        highContrast?: boolean;
         onclose: () => void;
         onconfirm: (customer: Customer) => void;
     } = $props();
@@ -69,8 +71,8 @@
     }
 </script>
 
-<Modal {open} title={mode === 'phone' ? 'Customer Check-In' : 'Sign In'} onclose={cancel}>
-    <div class="checkin-form">
+<Modal {open} title={mode === 'phone' ? 'Customer Check-In' : 'Sign In'} onclose={cancel} highContrast={highContrast}>
+    <div class="checkin-form" class:high-contrast={highContrast}>
         <div class="search-row">
             {#if mode === 'phone'}
                 <input
@@ -148,5 +150,48 @@
         display: flex;
         justify-content: flex-end;
         gap: 0.5rem;
+    }
+
+    .checkin-form.high-contrast {
+    color: #fff;
+}
+    /* High Contrast */
+    .checkin-form.high-contrast input,
+    .checkin-form.high-contrast select {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+    }
+
+    .checkin-form.high-contrast input::placeholder {
+        color: #fff;
+        opacity: 1;
+    }
+
+    .checkin-form.high-contrast .customer-info,
+    .checkin-form.high-contrast .card {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        box-shadow: none;
+    }
+
+    .checkin-form.high-contrast .btn-primary,
+    .checkin-form.high-contrast .btn-secondary,
+    .checkin-form.high-contrast .btn-ghost {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+    }
+
+    .checkin-form.high-contrast .btn-primary:hover,
+    .checkin-form.high-contrast .btn-secondary:hover,
+    .checkin-form.high-contrast .btn-ghost:hover {
+        background: #fff;
+        color: #000;
+    }
+
+    .checkin-form.high-contrast .error-text {
+        color: #ffff00;
     }
 </style>

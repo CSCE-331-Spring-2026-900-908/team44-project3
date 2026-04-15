@@ -421,7 +421,9 @@
 />
 
 <!-- Chatbot UI (floating) -->
-<Chatbot />
+<div style="--chatbot-right-offset: calc(340px + 40px);">
+    <Chatbot />
+</div>
 
 <style>
     /* ── Page ── */

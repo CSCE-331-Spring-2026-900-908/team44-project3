@@ -79,8 +79,8 @@ $effect(() => {
 <style>
     .chatbot-root {
         position: fixed;
-        right: 20px;
-        bottom: 20px;
+        right: var(--chatbot-right-offset, 20px);
+        bottom: var(--chatbot-bottom-offset, 20px);
         z-index: 9999;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     }

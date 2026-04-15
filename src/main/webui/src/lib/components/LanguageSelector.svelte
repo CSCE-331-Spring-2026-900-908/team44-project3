@@ -83,7 +83,7 @@
     .lang-selector {
         position: relative;
         display: inline-block;
-        z-index: 9999;
+        z-index: 50;
     }
 
     .lang-btn {
@@ -117,7 +117,7 @@
         border: 1px solid var(--color-border, #e2e8f0);
         border-radius: 0.5rem;
         box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-        z-index: 10000;
+        z-index: 51;
         min-width: 160px;
         max-height: 320px;
         overflow-y: auto;

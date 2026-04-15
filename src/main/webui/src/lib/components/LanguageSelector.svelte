@@ -57,7 +57,7 @@
     }
 </script>
 
-<div class="lang-selector" bind:this={selectorEl}>
+<div class="lang-selector" bind:this={selectorEl} translate="no">
     <button class="lang-btn" onclick={() => (open = !open)} aria-label="Select language">
         <span class="globe">🌐</span>
         <span class="lang-name">{getCurrentName()}</span>

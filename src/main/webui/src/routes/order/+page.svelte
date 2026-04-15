@@ -252,7 +252,7 @@
     <!-- Header -->
     <header class="order-header">
         <div class="header-left">
-            <h1>Team 44 Boba</h1>
+            <h1>Boba Bob's</h1>
         </div>
         <div class="header-right">
             <LanguageSelector />

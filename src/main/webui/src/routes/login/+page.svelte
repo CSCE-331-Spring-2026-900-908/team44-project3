@@ -53,7 +53,7 @@
 <div class="login-page">
     <div class="login-card card">
         <div class="login-header">
-            <h1>Team 44 Boba POS</h1>
+            <h1>Boba Bob's</h1>
             <div class="lang-row">
                 <LanguageSelector />
             </div>

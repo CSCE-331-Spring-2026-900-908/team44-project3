@@ -6,7 +6,7 @@
     let open = $state(false);
     let input = $state('');
     let messages = $state<Msg[]>([
-        { from: 'bot', text: "Hi! I'm Boba Assistant — how can I help?", time: new Date().toISOString() }
+        { from: 'bot', text: "Hi! I'm Boba Bob — how can I help?", time: new Date().toISOString() }
     ]);
 
     let endEl = $state<HTMLElement | null>(null);
@@ -45,7 +45,7 @@ $effect(() => {
     {#if open}
         <div class="chat-window" role="dialog" aria-label="Chat with us">
             <header class="chat-header">
-                <div class="chat-title">Boba Assistant</div>
+                <div class="chat-title">Boba Bob</div>
                 <button class="chat-close" aria-label="Close" onclick={toggle}>&times;</button>
             </header>
 

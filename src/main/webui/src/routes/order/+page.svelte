@@ -245,6 +245,20 @@
     function formatCategory(cat: string): string {
         return cat.replace(/_/g, ' ');
     }
+
+    let zoom = 1;
+
+	function zoomIn() {
+		zoom = Math.min(zoom + 0.1, 2);
+	}
+
+	function zoomOut() {
+		zoom = Math.max(zoom - 0.1, 0.5);
+	}
+
+	function resetZoom() {
+		zoom = 1;
+	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -255,6 +269,8 @@
             <h1>Boba Bob's</h1>
         </div>
         <div class="header-right">
+            <button class="header-btn accessibility" onclick={() => (magnifierOn = !magnifierOn)}> Screen Magnifier </button>
+            <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}> High Contrast </button>
             <LanguageSelector />
             {#if customer}
                 <span class="welcome-text"
@@ -611,6 +627,20 @@
         color: #c0392b;
     }
 
+    .header-btn.accessibility{
+        border-color: #65a4ed;
+        color: #65a4ed;
+        font-size: 0.8rem;
+    } 
+
+    .header-btn.accessibility:hover{
+        border-color: #65a4ed;
+        background: #faffe2;
+        color: #65a4ed;
+        font-size: 0.8rem;
+    } 
+
+
     /* ── Body ── */
     .order-body {
         display: flex;
@@ -624,6 +654,7 @@
         overflow-y: auto;
         padding: 1.5rem 2rem;
     }
+
 
     /* ── Hero Banner ── */
     .hero-banner {

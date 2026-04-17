@@ -245,9 +245,32 @@
     function formatCategory(cat: string): string {
         return cat.replace(/_/g, ' ');
     }
+
+    let zoom = 1;
+
+	function zoomIn() {
+		zoom = Math.min(zoom + 0.1, 2);
+        document.body.style.zoom = zoom;
+	}
+
+	function zoomOut() {
+		zoom = Math.max(zoom - 0.1, 1);
+        document.body.style.zoom = zoom;
+	}
+
+	function resetZoom() {
+		zoom = 1;
+        document.body.style.zoom = zoom;
+	}
 </script>
 
+<div class="zoom-controls">
+	<button onclick={zoomOut}>−</button>
+	<button onclick={zoomIn}>+</button>
+</div>
+
 <!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
 <div class="order-page" class:high-contrast={highContrast} class:magnifier-on={magnifierOn} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
     <!-- Header -->
     <header class="order-header">
@@ -255,6 +278,8 @@
             <h1>Boba Bob's</h1>
         </div>
         <div class="header-right">
+            <button class="header-btn accessibility" onclick={() => (magnifierOn = !magnifierOn)}> Screen Magnifier </button>
+            <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}> High Contrast </button>
             <LanguageSelector />
             {#if customer}
                 <span class="welcome-text"
@@ -545,6 +570,8 @@
     onclose={() => (showComplete = false)}
 />
 
+</div>
+
 <style>
     /* ── Page ── */
     .order-page {
@@ -611,6 +638,46 @@
         color: #c0392b;
     }
 
+    .header-btn.accessibility{
+        border-color: #65a4ed;
+        color: #65a4ed;
+        font-size: 0.8rem;
+    } 
+
+    .header-btn.accessibility:hover{
+        border-color: #65a4ed;
+        background: #faffe2;
+        color: #65a4ed;
+        font-size: 0.8rem;
+    } 
+
+    /* zoom controls */
+
+    .zoom-controls {
+		position: fixed;
+		bottom: 16px;
+		left: 16px;
+		display: flex;
+		gap: 8px;
+		z-index: 9999;
+
+		/* Optional styling */
+		background: rgba(0, 0, 0, 0.6);
+		padding: 8px;
+		border-radius: 8px;
+	}
+
+	.zoom-controls>button {
+		font-size: 1.2rem;
+		padding: 0.4rem 0.8rem;
+		cursor: pointer;
+	}
+
+	.zoom-wrapper {
+		transform-origin: top left;
+	}
+
+
     /* ── Body ── */
     .order-body {
         display: flex;
@@ -624,6 +691,7 @@
         overflow-y: auto;
         padding: 1.5rem 2rem;
     }
+
 
     /* ── Hero Banner ── */
     .hero-banner {
@@ -1263,6 +1331,11 @@
     border-color: #ffff00;
 }
 
+.zoom-controls.high-contrast>button{
+    background: #ffff00;
+    color: #000;
+}
+
 .order-page.high-contrast .cat-pill.active .cat-label {
     color: #000;
 }
@@ -1341,6 +1414,7 @@
     .order-page.magnifier-on .cart-card {
         padding: 1rem;
     }
+    
 
     .order-page.magnifier-on .cart-remove {
         width: 32px;

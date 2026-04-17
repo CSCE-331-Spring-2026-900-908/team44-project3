@@ -250,18 +250,27 @@
 
 	function zoomIn() {
 		zoom = Math.min(zoom + 0.1, 2);
+        document.body.style.zoom = zoom;
 	}
 
 	function zoomOut() {
-		zoom = Math.max(zoom - 0.1, 0.5);
+		zoom = Math.max(zoom - 0.1, 1);
+        document.body.style.zoom = zoom;
 	}
 
 	function resetZoom() {
 		zoom = 1;
+        document.body.style.zoom = zoom;
 	}
 </script>
 
+<div class="zoom-controls">
+	<button onclick={zoomOut}>−</button>
+	<button onclick={zoomIn}>+</button>
+</div>
+
 <!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
 <div class="order-page" class:high-contrast={highContrast} class:magnifier-on={magnifierOn} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
     <!-- Header -->
     <header class="order-header">
@@ -561,6 +570,8 @@
     onclose={() => (showComplete = false)}
 />
 
+</div>
+
 <style>
     /* ── Page ── */
     .order-page {
@@ -639,6 +650,32 @@
         color: #65a4ed;
         font-size: 0.8rem;
     } 
+
+    /* zoom controls */
+
+    .zoom-controls {
+		position: fixed;
+		bottom: 16px;
+		left: 16px;
+		display: flex;
+		gap: 8px;
+		z-index: 9999;
+
+		/* Optional styling */
+		background: rgba(0, 0, 0, 0.6);
+		padding: 8px;
+		border-radius: 8px;
+	}
+
+	.zoom-controls>button {
+		font-size: 1.2rem;
+		padding: 0.4rem 0.8rem;
+		cursor: pointer;
+	}
+
+	.zoom-wrapper {
+		transform-origin: top left;
+	}
 
 
     /* ── Body ── */
@@ -1294,6 +1331,11 @@
     border-color: #ffff00;
 }
 
+.zoom-controls.high-contrast>button{
+    background: #ffff00;
+    color: #000;
+}
+
 .order-page.high-contrast .cat-pill.active .cat-label {
     color: #000;
 }
@@ -1372,6 +1414,7 @@
     .order-page.magnifier-on .cart-card {
         padding: 1rem;
     }
+    
 
     .order-page.magnifier-on .cart-remove {
         width: 32px;

@@ -102,7 +102,7 @@
     function exitToHome() {
         clearIdleTimer();
         clearCustomer();
-        void goto(resolve('/'));
+        void goto(resolve('/customer'));
     }
 
     function handleGlobalKeydown(event: KeyboardEvent) {
@@ -227,7 +227,7 @@
         clearIdleTimer();
         clearCustomer();
         showComplete = false;
-        void goto(resolve('/'));
+        void goto(resolve('/customer'));
     }
 
     function startOver() {

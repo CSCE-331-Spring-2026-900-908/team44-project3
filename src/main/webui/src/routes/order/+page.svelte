@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { MenuItem, CartItem, Customer } from '$lib/types';
     import { onDestroy, onMount } from 'svelte';
+    import { SvelteSet } from 'svelte/reactivity';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { getCategories, getItemsByCategory } from '$lib/api';
@@ -30,7 +31,7 @@
     let items = $state<MenuItem[]>([]);
     let itemsLoading = $state(false);
     let cart = $state<CartItem[]>([]);
-    let customer = $state<Customer | null>(getCustomer());
+    let customer = $state(getCustomer());
 
     let customizeItem = $state<MenuItem | null>(null);
     let showCustomize = $state(false);
@@ -50,7 +51,7 @@
 
     const POINTS_PER_REDEEM = 10;
 
-    let redeemedIndices = $state<Set<number>>(new Set());
+    let redeemedIndices = $state(new SvelteSet<number>());
 
     let maxRedeemable = $derived(
         customer ? Math.floor(customer.rewardPoints / POINTS_PER_REDEEM) : 0
@@ -191,7 +192,7 @@
 
     function removeFromCart(index: number) {
         cart = cart.filter((_, i) => i !== index);
-        const updated = new Set<number>();
+        const updated = new SvelteSet<number>();
         for (const idx of redeemedIndices) {
             if (idx < index) updated.add(idx);
             else if (idx > index) updated.add(idx - 1);
@@ -200,7 +201,7 @@
     }
 
     function toggleRedeem(index: number) {
-        const next = new Set(redeemedIndices);
+        const next = new SvelteSet(redeemedIndices);
         if (next.has(index)) {
             next.delete(index);
         } else if (next.size < maxRedeemable) {
@@ -233,7 +234,7 @@
     function startOver() {
         cart = [];
         customer = getCustomer();
-        redeemedIndices = new Set();
+        redeemedIndices = new SvelteSet();
         customizeItem = null;
         showCustomize = false;
         showCheckIn = false;
@@ -336,7 +337,9 @@
                         <button
                             class="item-card"
                             class:unavailable={!item.isAvailable}
-                            onclick={() => openCustomization(item)}
+                            onclick={() => {
+                                openCustomization(item);
+                            }}
                             disabled={!item.isAvailable}
                         >
                             <div class="item-icon">
@@ -420,7 +423,9 @@
                                         <button
                                             class="redeem-toggle"
                                             class:active={redeemedIndices.has(i)}
-                                            onclick={() => toggleRedeem(i)}
+                                            onclick={() => {
+                                                toggleRedeem(i);
+                                            }}
                                             disabled={!redeemedIndices.has(i) && redeemedIndices.size >= maxRedeemable}
                                         >
                                             {redeemedIndices.has(i) ? 'Undo' : 'Redeem'}
@@ -428,8 +433,11 @@
                                     {/if}
                                 </div>
                             </div>
-                            <button class="cart-remove" onclick={() => removeFromCart(i)}
-                                >&times;</button
+                            <button
+                                class="cart-remove"
+                                onclick={() => {
+                                    removeFromCart(i);
+                                }}>&times;</button
                             >
                         </div>
                     {/each}
@@ -487,8 +495,12 @@
     >
         <div
             class="idle-card card"
-            onclick={(e) => e.stopPropagation()}
-            onkeydown={(e) => e.stopPropagation()}
+            onclick={(e) => {
+                e.stopPropagation();
+            }}
+            onkeydown={(e) => {
+                e.stopPropagation();
+            }}
             role="none"
         >
             <p class="idle-title">Reset Cart?</p>
@@ -516,8 +528,12 @@
     >
         <div
             class="idle-card card"
-            onclick={(e) => e.stopPropagation()}
-            onkeydown={(e) => e.stopPropagation()}
+            onclick={(e) => {
+                e.stopPropagation();
+            }}
+            onkeydown={(e) => {
+                e.stopPropagation();
+            }}
             role="none"
         >
             <p class="idle-title">Leave ordering?</p>

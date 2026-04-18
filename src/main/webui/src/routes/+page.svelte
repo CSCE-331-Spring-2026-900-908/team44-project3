@@ -1,5 +1,11 @@
 <script lang="ts">
+    import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
+    import { restoreCustomer } from '$lib/stores/auth.svelte';
+
+    $effect(() => {
+        if (restoreCustomer()) void goto(resolve('/customer'));
+    });
 </script>
 
 <div class="portal">

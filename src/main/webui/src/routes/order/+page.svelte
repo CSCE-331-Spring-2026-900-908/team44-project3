@@ -348,7 +348,20 @@
                             <div class="item-bottom">
                                 <span class="item-price">{formatCurrency(item.basePrice)}</span>
                                 {#if item.isAvailable}
-                                    <span class="add-icon">+</span>
+                                    <span class="add-icon" aria-hidden="true">
+                                        <svg
+                                            viewBox="0 0 12 12"
+                                            width="12"
+                                            height="12"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                        >
+                                            <line x1="6" y1="2" x2="6" y2="10" />
+                                            <line x1="2" y1="6" x2="10" y2="6" />
+                                        </svg>
+                                    </span>
                                 {:else}
                                     <span class="sold-out">Sold Out</span>
                                 {/if}
@@ -858,9 +871,6 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
-        font-weight: 700;
-        line-height: 1;
         flex-shrink: 0;
     }
 

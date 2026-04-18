@@ -522,7 +522,7 @@
     <div class="idle-overlay" onclick={resetIdle} onkeydown={resetIdle}>
         <div class="idle-card card">
             <p class="idle-title">Still there?</p>
-            <p class="idle-text">Returning to home in {idleCountdown}s...</p>
+            <p class="idle-text">Returning to home in <span class="idle-count">{idleCountdown}</span>s...</p>
             <button class="btn-primary btn-lg" onclick={resetIdle}>I'm still here</button>
         </div>
     </div>
@@ -1077,6 +1077,13 @@
     .idle-text {
         font-size: 1rem;
         color: #999;
+    }
+
+    .idle-count {
+        display: inline-block;
+        min-width: 1.25em;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
     }
 
     .confirm-actions {

@@ -27,6 +27,9 @@
 
     type ReceiptStatus = 'idle' | 'printed' | 'emailed';
 
+    let status = '';
+	let sending = false;
+
     let receiptStatus = $state<ReceiptStatus>('idle');
     let countdown = $state(10);
     let dismissTimer: ReturnType<typeof setInterval> | null = null;
@@ -68,8 +71,19 @@
         startCountdown();
     }
 
-    function handleEmail() {
-        receiptStatus = 'emailed';
+    async function handleEmail() {
+        sending = true;
+		status = '';
+
+		try {
+			const res = await fetch('http://localhost:8081/email');
+			const text = await res.text();
+			status = `${res.status}: ${text}`;
+		} catch (err) {
+			status = err instanceof Error ? err.message : 'Request failed';
+		} finally {
+			sending = false;
+		}
         startCountdown();
     }
 
@@ -116,7 +130,7 @@
             <p class="receipt-label">Would you like a receipt?</p>
             <div class="receipt-options">
                 <button class="btn-secondary" onclick={handlePrint}>Print Receipt</button>
-                <button class="btn-secondary" onclick={handleEmail}>Email Receipt</button>
+                <button class="btn-secondary" onclick={handleEmail} disabled={sending}>{sending ? 'Sending...' : 'Email Receipt'}</button>
                 <button class="btn-ghost" onclick={handleNoReceipt}>No Receipt</button>
             </div>
             <p class="countdown-text">Closing in {countdown}s...</p>

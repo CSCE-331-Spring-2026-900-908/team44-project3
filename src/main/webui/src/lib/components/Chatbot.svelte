@@ -3,16 +3,19 @@
 
     let open = $state(false);
     let input = $state('');
+
+    //Default introduction message to welcome user
     let messages = $state<Msg[]>([
         { from: 'bot', text: "Hi! I'm Boba Bob — how can I help?", time: new Date().toISOString() }
     ]);
 
     let endEl = $state<HTMLElement | null>(null);
-
+//Basic toggle function to open and close chat box
     function toggle() {
         open = !open;
     }
 
+//Send Function. Sends over the user prompt over to backend. Handles errors if backend is not connected
     async function send() {
         const text = input.trim();
         if (!text) return;
@@ -58,6 +61,8 @@
         }
     });
 </script>
+
+//Styling for Chatbot
 
 <div class="chatbot-root">
     {#if open}

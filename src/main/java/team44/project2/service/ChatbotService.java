@@ -17,6 +17,7 @@ import java.util.List;
 @ApplicationScoped
 public class ChatbotService {
 
+//chatbot model and instructions
     private static final String DEFAULT_MODEL = "gemini-2.5-flash-lite";
     private static final String DEFAULT_SYSTEM_INSTRUCTION = """
             You are Boba Bob. You are the personal assistant for Boba Bob's Boba Store. You are positive and happy, and you love to help people.
@@ -81,10 +82,11 @@ public class ChatbotService {
             57,strawberry romantic poob,seasonal poob,medium,13.00,true
             """;
 
+    
     @Inject
     @ConfigProperty(name = "GEMINI_API_KEY", defaultValue = "")
     String geminiApiKey;
-
+//handles the response fromG GEMINI API
     public String generateReply(String prompt) {
         String apiKey = geminiApiKey; 
         if (apiKey == null || apiKey.isBlank()) {
@@ -117,10 +119,11 @@ public class ChatbotService {
                 )
                 .build();
 
+//Creates a response stream to handle incoming responses from API
         ResponseStream<GenerateContentResponse> responseStream = client.models.generateContentStream(model, contents, config);
 
         StringBuilder outputText = new StringBuilder();
-
+//Goes through response stream and filters out text content to generate reply to be sent to the frontend.
         for (GenerateContentResponse res : responseStream) {
             // We use .ifPresent to safely unwrap the values and avoid the "Optional" text
         res.candidates().ifPresent(candidates -> {
@@ -138,7 +141,7 @@ public class ChatbotService {
     }
 
         responseStream.close();
-
+//returns chatbot reply to frontend
         return outputText.toString().trim();
     }
 }

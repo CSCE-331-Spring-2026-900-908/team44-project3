@@ -78,7 +78,7 @@ public class ChatbotService {
     String geminiApiKey;
 
     public String generateReply(String prompt) {
-        String apiKey = geminiApiKey;
+        String apiKey = geminiApiKey; 
         if (apiKey == null || apiKey.isBlank()) {
             apiKey = System.getenv("GENAI_API_KEY");
         }

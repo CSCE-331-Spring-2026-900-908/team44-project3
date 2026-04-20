@@ -20,7 +20,7 @@ public class ChatbotService {
     private static final String DEFAULT_MODEL = "gemini-2.5-flash-lite";
     private static final String DEFAULT_SYSTEM_INSTRUCTION = """
             You are Boba Bob. You are the personal assistant for Boba Bob's Boba Store. You are positive and happy, and you love to help people.
-            You are espcially excited to talk about the Poob items on the menu. 
+            
              People will ask you questions, and you will answer them to the best of your ability based on the below menu items.
 
             menu_item_id,name,category,size,base_price,is_available

@@ -10,7 +10,7 @@ import com.google.genai.types.ThinkingConfig;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-//import io.github.cdimascio.dotenv.Dotenv;
+
 
 import java.util.List;
 
@@ -19,7 +19,9 @@ public class ChatbotService {
 
     private static final String DEFAULT_MODEL = "gemini-2.5-flash-lite";
     private static final String DEFAULT_SYSTEM_INSTRUCTION = """
-            You are Boba Bob. You are the personal assistant for Boba Bob's Boba Store. You are positive and happy, and you love to help people. People will ask you questions, and you will answer them to the best of your ability based on the below menu items.
+            You are Boba Bob. You are the personal assistant for Boba Bob's Boba Store. You are positive and happy, and you love to help people.
+            You are espcially excited to talk about the Poob items on the menu. 
+             People will ask you questions, and you will answer them to the best of your ability based on the below menu items.
 
             menu_item_id,name,category,size,base_price,is_available
             1,classic pearl milk tea,milky series,regular,5.50,true
@@ -71,6 +73,12 @@ public class ChatbotService {
             47,creama,topping,,1.00,true
             48,pudding,topping,,0.75,true
             49,strawberry popping boba,topping,,0.75,true
+            53,pooblicious bubble tea,seasonal poob,regular,10.99,true
+            55,scary poob,seasonal poob,large,24.00,true
+            54,scary poob,seasonal poob,regular,67.00,true
+            56,strawberry romantic poob,seasonal poob,medium,13.00,true
+            58,strawberry romantic poob,seasonal poob,medium,13.00,true
+            57,strawberry romantic poob,seasonal poob,medium,13.00,true
             """;
 
     @Inject
@@ -114,15 +122,20 @@ public class ChatbotService {
         StringBuilder outputText = new StringBuilder();
 
         for (GenerateContentResponse res : responseStream) {
-            if (res.candidates().isEmpty() || res.candidates().get().get(0).content().isEmpty() || res.candidates().get().get(0).content().get().parts().isEmpty()) {
-                continue;
+            // We use .ifPresent to safely unwrap the values and avoid the "Optional" text
+        res.candidates().ifPresent(candidates -> {
+            if (!candidates.isEmpty()) {
+                candidates.get(0).content().ifPresent(content -> {
+                    content.parts().ifPresent(parts -> {
+                        for (Part part : parts) {
+                            // Extract only the raw string text from the Optional
+                            part.text().ifPresent(outputText::append);
+                        }
+                    });
+                });
             }
-
-            List<Part> parts = res.candidates().get().get(0).content().get().parts().get();
-            for (Part part : parts) {
-                outputText.append(part.text());
-            }
-        }
+        });
+    }
 
         responseStream.close();
 

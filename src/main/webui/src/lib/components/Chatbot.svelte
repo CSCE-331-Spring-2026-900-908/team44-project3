@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { tick } from 'svelte';
-
     type Msg = { from: 'bot' | 'user'; text: string; time: string };
 
     let open = $state(false);
@@ -16,29 +14,49 @@
     }
 
     async function send() {
-    const text = input.trim();
-    if (!text) return;
+        const text = input.trim();
+        if (!text) return;
 
-    
-    messages.push({ from: 'user', text, time: new Date().toISOString() });
-    input = '';
+        messages.push({ from: 'user', text, time: new Date().toISOString() });
+        input = '';
 
-    
-    setTimeout(() => {
-        messages.push({ 
-            from: 'bot', 
-            text: 'Thanks — we received your question.', 
-            time: new Date().toISOString() 
-        });
-    }, 500);
-}
+        try {
+            const response = await fetch('/api/chatbot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: text })
+            });
 
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`Chatbot API failed: ${response.status} ${response.statusText} — ${errorBody}`);
+            }
 
-$effect(() => {
-    if (open || messages.length) {
-        endEl?.scrollIntoView({ behavior: 'smooth' });
+            const data = await response.json();
+            messages.push({ 
+                from: 'bot', 
+                text: data.text ?? 'Boba Bob did not return a response.', 
+                time: new Date().toISOString() 
+            });
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            messages.push({ 
+                from: 'bot', 
+                text: `Sorry, I'm having trouble connecting to Boba Bob: ${errorMessage}`,
+                time: new Date().toISOString() 
+            });
+            console.error('Chatbot send error:', err);
+        }
     }
-});
+
+
+    $effect(() => {
+        if (open || messages.length) {
+            endEl?.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
 </script>
 
 <div class="chatbot-root">

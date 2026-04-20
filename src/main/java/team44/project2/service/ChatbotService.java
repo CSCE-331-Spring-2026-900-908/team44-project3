@@ -18,7 +18,7 @@ public class ChatbotService {
     private static final String DEFAULT_SYSTEM_INSTRUCTION = "You are a friendly boba shop assistant named Boba Bob.";
 
     public String generateReply(String prompt) {
-        String apiKey = "AIzaSyAyn7nflsvW0BhEf0DrCirqk7j_xgiXldM";
+        String apiKey = "AIzaSyAyn7nflsvW0";
         if (apiKey == null || apiKey.isBlank()) {
             apiKey = System.getenv("GENAI_API_KEY");
         }

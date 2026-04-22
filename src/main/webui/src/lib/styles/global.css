@@ -239,3 +239,15 @@ tr.selected {
     background: #fff3d4;
     color: #8a6914;
 }
+
+/* Hide Google Translate default toolbar */
+.goog-te-banner-frame,
+.goog-te-menu-frame,
+.skiptranslate {
+    display: none !important;
+}
+body {
+    top: 0 !important;
+    position: static !important;
+}
+.goog-te-gadget { display: none !important; }

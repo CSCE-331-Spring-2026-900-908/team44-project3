@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { MenuItem, CartItem, Customer } from '$lib/types';
-    import { onDestroy } from 'svelte';
+    import { onDestroy, onMount } from 'svelte';
+    import { SvelteSet } from 'svelte/reactivity';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { getCategories, getItemsByCategory } from '$lib/api';
@@ -11,6 +12,7 @@
     import PaymentModal from '$lib/components/PaymentModal.svelte';
     import TransactionComplete from '$lib/components/TransactionComplete.svelte';
     import Chatbot from '$lib/components/Chatbot.svelte';
+    import LanguageSelector from '$lib/components/LanguageSelector.svelte';
 
     const categoryEmojis: Record<string, string> = {
         milk_tea: '\u{1F95B}',
@@ -30,7 +32,7 @@
     let items = $state<MenuItem[]>([]);
     let itemsLoading = $state(false);
     let cart = $state<CartItem[]>([]);
-    let customer = $state<Customer | null>(getCustomer());
+    let customer = $state(getCustomer());
 
     let customizeItem = $state<MenuItem | null>(null);
     let showCustomize = $state(false);
@@ -40,12 +42,28 @@
     let showConfirmReset = $state(false);
     let showConfirmExit = $state(false);
 
+    let highContrast = $state(false);
+    let magnifierOn = $state(false);
+
     let completedOrderId = $state(0);
     let completedTip = $state(0);
     let completedTotal = $state(0);
+    let completedPointsEarned = $state(0);
+
+    const POINTS_PER_REDEEM = 10;
+
+    let redeemedIndices = $state(new SvelteSet<number>());
+
+    let maxRedeemable = $derived(
+        customer ? Math.floor(customer.rewardPoints / POINTS_PER_REDEEM) : 0
+    );
+
+    let discount = $derived(
+        cart.reduce((sum, c, i) => sum + (redeemedIndices.has(i) ? c.item.basePrice : 0), 0)
+    );
 
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
-    let tax = $derived(Math.round(subtotal * TAX_RATE * 100) / 100);
+    let tax = $derived(Math.round((subtotal - discount) * TAX_RATE * 100) / 100);
 
     let idleSeconds = $state(0);
     let showIdleWarning = $state(false);
@@ -86,7 +104,32 @@
     function exitToHome() {
         clearIdleTimer();
         clearCustomer();
-        void goto(resolve('/'));
+        void goto(resolve('/customer'));
+    }
+
+    function handleGlobalKeydown(event: KeyboardEvent) {
+        const target = event.target as HTMLElement | null;
+        const tag = target?.tagName;
+
+        const isTypingField =
+            tag === 'INPUT' ||
+            tag === 'TEXTAREA' ||
+            tag === 'SELECT' ||
+            target?.isContentEditable;
+
+        if (isTypingField) return;
+
+        if (event.key === 'c' || event.key === 'C') {
+            highContrast = !highContrast;
+        }
+
+        if (event.key === 'm' || event.key === 'M') {
+            magnifierOn = !magnifierOn;
+        }
+    }
+
+    function handleGlobalPointer() {
+        resetIdle();
     }
 
     $effect(() => {
@@ -95,6 +138,20 @@
 
     onDestroy(() => {
         clearIdleTimer();
+    });
+
+    onMount(() => {
+        window.addEventListener('keydown', handleGlobalKeydown);
+        window.addEventListener('pointerdown', handleGlobalPointer);
+        window.addEventListener('mousemove', resetIdle);
+        window.addEventListener('touchstart', handleGlobalPointer);
+
+        return () => {
+            window.removeEventListener('keydown', handleGlobalKeydown);
+            window.removeEventListener('pointerdown', handleGlobalPointer);
+            window.removeEventListener('mousemove', resetIdle);
+            window.removeEventListener('touchstart', handleGlobalPointer);
+        };
     });
 
     $effect(() => {
@@ -136,6 +193,22 @@
 
     function removeFromCart(index: number) {
         cart = cart.filter((_, i) => i !== index);
+        const updated = new SvelteSet<number>();
+        for (const idx of redeemedIndices) {
+            if (idx < index) updated.add(idx);
+            else if (idx > index) updated.add(idx - 1);
+        }
+        redeemedIndices = updated;
+    }
+
+    function toggleRedeem(index: number) {
+        const next = new SvelteSet(redeemedIndices);
+        if (next.has(index)) {
+            next.delete(index);
+        } else if (next.size < maxRedeemable) {
+            next.add(index);
+        }
+        redeemedIndices = next;
     }
 
     function handleCustomerConfirm(c: Customer) {
@@ -143,10 +216,11 @@
         showCheckIn = false;
     }
 
-    function handlePaymentComplete(orderId: number, tip: number, total: number) {
+    function handlePaymentComplete(orderId: number, tip: number, total: number, pointsEarned: number) {
         completedOrderId = orderId;
         completedTip = tip;
         completedTotal = total;
+        completedPointsEarned = pointsEarned;
         showPayment = false;
         showComplete = true;
     }
@@ -155,12 +229,13 @@
         clearIdleTimer();
         clearCustomer();
         showComplete = false;
-        void goto(resolve('/'));
+        void goto(resolve('/customer'));
     }
 
     function startOver() {
         cart = [];
         customer = getCustomer();
+        redeemedIndices = new SvelteSet();
         customizeItem = null;
         showCustomize = false;
         showCheckIn = false;
@@ -172,22 +247,51 @@
     function formatCategory(cat: string): string {
         return cat.replace(/_/g, ' ');
     }
+
+    let zoom = 1;
+
+	function zoomIn() {
+		zoom = Math.min(zoom + 0.1, 2);
+        document.body.style.zoom = zoom;
+	}
+
+	function zoomOut() {
+		zoom = Math.max(zoom - 0.1, 1);
+        document.body.style.zoom = zoom;
+	}
+
+	function resetZoom() {
+		zoom = 1;
+        document.body.style.zoom = zoom;
+	}
 </script>
 
+<div class="zoom-controls">
+	<button onclick={zoomOut}>−</button>
+	<button onclick={zoomIn}>+</button>
+</div>
+
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="order-page" onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
+<div class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
+<div class="order-page" class:high-contrast={highContrast} class:magnifier-on={magnifierOn} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
     <!-- Header -->
     <header class="order-header">
         <div class="header-left">
-            <h1>Team 44 Boba</h1>
+            <h1>Boba Bob's</h1>
         </div>
         <div class="header-right">
+            <button class="header-btn accessibility" onclick={() => (magnifierOn = !magnifierOn)}> Screen Magnifier </button>
+            <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}> High Contrast </button>
+            <LanguageSelector />
             {#if customer}
                 <span class="welcome-text"
                     >Hi, {customer.firstName && customer.lastName
                         ? toTitleCase(`${customer.firstName} ${customer.lastName}`)
                         : customer.email}</span
                 >
+                <span class="points-badge" class:points-redeemable={customer.rewardPoints >= 10}>
+                    {customer.rewardPoints} pts
+                </span>
             {:else}
                 <button class="header-btn" onclick={() => (showCheckIn = true)}> Sign In </button>
             {/if}
@@ -234,7 +338,9 @@
                         <button
                             class="item-card"
                             class:unavailable={!item.isAvailable}
-                            onclick={() => openCustomization(item)}
+                            onclick={() => {
+                                openCustomization(item);
+                            }}
                             disabled={!item.isAvailable}
                         >
                             <div class="item-icon">
@@ -246,7 +352,20 @@
                             <div class="item-bottom">
                                 <span class="item-price">{formatCurrency(item.basePrice)}</span>
                                 {#if item.isAvailable}
-                                    <span class="add-icon">+</span>
+                                    <span class="add-icon" aria-hidden="true">
+                                        <svg
+                                            viewBox="0 0 12 12"
+                                            width="12"
+                                            height="12"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                        >
+                                            <line x1="6" y1="2" x2="6" y2="10" />
+                                            <line x1="2" y1="6" x2="10" y2="6" />
+                                        </svg>
+                                    </span>
                                 {:else}
                                     <span class="sold-out">Sold Out</span>
                                 {/if}
@@ -261,12 +380,18 @@
         <aside class="cart-panel">
             <h3 class="cart-title">Your Cart</h3>
 
+            {#if customer && maxRedeemable > 0 && maxRedeemable > redeemedIndices.size && cart.length > 0}
+                <div class="free-drink-banner">
+                    You have {maxRedeemable - redeemedIndices.size} free drink{maxRedeemable - redeemedIndices.size > 1 ? 's' : ''}! Tap the <strong>Redeem</strong> button next to any item below.
+                </div>
+            {/if}
+
             <div class="cart-items">
                 {#if cart.length === 0}
                     <p class="cart-empty">Your cart is empty. Browse the menu and add items!</p>
                 {:else}
                     {#each cart as cartItem, i (i)}
-                        <div class="cart-card">
+                        <div class="cart-card" class:redeemed={redeemedIndices.has(i)}>
                             <div class="cart-card-icon">
                                 {categoryEmojis[cartItem.item.category] ?? '\u{1F964}'}
                             </div>
@@ -283,12 +408,37 @@
                                             .join(', ')}
                                     </span>
                                 {/if}
-                                <span class="cart-card-price"
-                                    >{formatCurrency(cartItem.totalPrice)}</span
-                                >
+                                <div class="cart-card-bottom">
+                                    {#if redeemedIndices.has(i)}
+                                        <span class="redeem-label">FREE (reward)</span>
+                                        <span class="cart-card-price">
+                                            <span class="price-struck">{formatCurrency(cartItem.item.basePrice)}</span>
+                                            {formatCurrency(cartItem.totalPrice - cartItem.item.basePrice)}
+                                        </span>
+                                    {:else}
+                                        <span class="cart-card-price"
+                                            >{formatCurrency(cartItem.totalPrice)}</span
+                                        >
+                                    {/if}
+                                    {#if maxRedeemable > 0 && customer}
+                                        <button
+                                            class="redeem-toggle"
+                                            class:active={redeemedIndices.has(i)}
+                                            onclick={() => {
+                                                toggleRedeem(i);
+                                            }}
+                                            disabled={!redeemedIndices.has(i) && redeemedIndices.size >= maxRedeemable}
+                                        >
+                                            {redeemedIndices.has(i) ? 'Undo' : 'Redeem'}
+                                        </button>
+                                    {/if}
+                                </div>
                             </div>
-                            <button class="cart-remove" onclick={() => removeFromCart(i)}
-                                >&times;</button
+                            <button
+                                class="cart-remove"
+                                onclick={() => {
+                                    removeFromCart(i);
+                                }}>&times;</button
                             >
                         </div>
                     {/each}
@@ -296,24 +446,36 @@
             </div>
 
             <div class="cart-summary">
+                {#if redeemedIndices.size > 0}
+                    <div class="cart-discount-banner">
+                        {redeemedIndices.size} drink{redeemedIndices.size > 1 ? 's' : ''} redeemed
+                        ({redeemedIndices.size * POINTS_PER_REDEEM} pts)
+                    </div>
+                {/if}
                 <div class="summary-line">
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal)}</span>
                 </div>
+                {#if discount > 0}
+                    <div class="summary-line discount-line">
+                        <span>Rewards Discount</span>
+                        <span>-{formatCurrency(discount)}</span>
+                    </div>
+                {/if}
                 <div class="summary-line tax-line">
                     <span>Tax (8.25%)</span>
                     <span>{formatCurrency(tax)}</span>
                 </div>
                 <div class="summary-line total-line">
                     <span>Total</span>
-                    <span>{formatCurrency(subtotal + tax)}</span>
+                    <span>{formatCurrency(subtotal - discount + tax)}</span>
                 </div>
                 <button
                     class="pay-btn"
                     disabled={cart.length === 0}
                     onclick={() => (showPayment = true)}
                 >
-                    Pay {formatCurrency(subtotal + tax)}
+                    Pay {formatCurrency(subtotal - discount + tax)}
                 </button>
                 {#if cart.length > 0}
                     <button class="reset-btn" onclick={() => (showConfirmReset = true)}
@@ -334,8 +496,12 @@
     >
         <div
             class="idle-card card"
-            onclick={(e) => e.stopPropagation()}
-            onkeydown={(e) => e.stopPropagation()}
+            onclick={(e) => {
+                e.stopPropagation();
+            }}
+            onkeydown={(e) => {
+                e.stopPropagation();
+            }}
             role="none"
         >
             <p class="idle-title">Reset Cart?</p>
@@ -363,8 +529,12 @@
     >
         <div
             class="idle-card card"
-            onclick={(e) => e.stopPropagation()}
-            onkeydown={(e) => e.stopPropagation()}
+            onclick={(e) => {
+                e.stopPropagation();
+            }}
+            onkeydown={(e) => {
+                e.stopPropagation();
+            }}
             role="none"
         >
             <p class="idle-title">Leave ordering?</p>
@@ -382,7 +552,7 @@
     <div class="idle-overlay" onclick={resetIdle} onkeydown={resetIdle}>
         <div class="idle-card card">
             <p class="idle-title">Still there?</p>
-            <p class="idle-text">Returning to home in {idleCountdown}s...</p>
+            <p class="idle-text">Returning to home in <span class="idle-count">{idleCountdown}</span>s...</p>
             <button class="btn-primary btn-lg" onclick={resetIdle}>I'm still here</button>
         </div>
     </div>
@@ -391,6 +561,8 @@
 <ItemCustomization
     open={showCustomize}
     item={customizeItem}
+    highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onclose={() => (showCustomize = false)}
     onadd={addToCart}
 />
@@ -398,6 +570,8 @@
 <CustomerCheckIn
     open={showCheckIn}
     mode="email"
+    highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onclose={() => (showCheckIn = false)}
     onconfirm={handleCustomerConfirm}
 />
@@ -406,7 +580,10 @@
     open={showPayment}
     {cart}
     {customer}
+    {redeemedIndices}
     employeeId={null}
+    highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onclose={() => (showPayment = false)}
     oncomplete={handlePaymentComplete}
 />
@@ -416,6 +593,9 @@
     orderId={completedOrderId}
     tip={completedTip}
     total={completedTotal}
+    pointsEarned={completedPointsEarned}
+    highContrast={highContrast}
+    magnifierOn={magnifierOn}
     onnewsale={newSale}
     onclose={() => (showComplete = false)}
 />
@@ -491,6 +671,46 @@
         color: #c0392b;
     }
 
+    .header-btn.accessibility{
+        border-color: #65a4ed;
+        color: #65a4ed;
+        font-size: 0.8rem;
+    } 
+
+    .header-btn.accessibility:hover{
+        border-color: #65a4ed;
+        background: #faffe2;
+        color: #65a4ed;
+        font-size: 0.8rem;
+    } 
+
+    /* zoom controls */
+
+    .zoom-controls {
+		position: fixed;
+		bottom: 16px;
+		left: 16px;
+		display: flex;
+		gap: 8px;
+		z-index: 9999;
+
+		/* Optional styling */
+		background: rgba(0, 0, 0, 0.6);
+		padding: 8px;
+		border-radius: 8px;
+	}
+
+	.zoom-controls>button {
+		font-size: 1.2rem;
+		padding: 0.4rem 0.8rem;
+		cursor: pointer;
+	}
+
+	.zoom-wrapper {
+		transform-origin: top left;
+	}
+
+
     /* ── Body ── */
     .order-body {
         display: flex;
@@ -504,6 +724,7 @@
         overflow-y: auto;
         padding: 1.5rem 2rem;
     }
+
 
     /* ── Hero Banner ── */
     .hero-banner {
@@ -670,9 +891,6 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
-        font-weight: 700;
-        line-height: 1;
         flex-shrink: 0;
     }
 
@@ -891,6 +1109,13 @@
         color: #999;
     }
 
+    .idle-count {
+        display: inline-block;
+        min-width: 1.25em;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
     .confirm-actions {
         display: flex;
         gap: 0.75rem;
@@ -909,5 +1134,328 @@
 
     .confirm-exit-btn:hover {
         background: #c0392b;
+    }
+
+    .free-drink-banner {
+        text-align: center;
+        font-size: 0.82rem;
+        color: #e65100;
+        background: #fff3e0;
+        padding: 0.6rem 0.75rem;
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        line-height: 1.4;
+    }
+
+    .cart-card.redeemed {
+        background: #f0faf0;
+        border-color: #c8e6c9;
+    }
+
+    .redeem-label {
+        display: inline-block;
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #2e7d32;
+        background: #e8f5e9;
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        margin-top: 0.1rem;
+    }
+
+    .price-struck {
+        text-decoration: line-through;
+        color: #999;
+        margin-right: 0.3rem;
+    }
+
+    .cart-card-bottom {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.2rem;
+        flex-wrap: wrap;
+    }
+
+    .redeem-toggle {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 8px;
+        border: 1.5px solid #e65100;
+        background: transparent;
+        color: #e65100;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .redeem-toggle.active {
+        background: #e65100;
+        color: white;
+    }
+
+    .redeem-toggle:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    .cart-discount-banner {
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #2e7d32;
+        background: #e8f5e9;
+        padding: 0.4rem;
+        border-radius: 10px;
+        margin-bottom: 0.75rem;
+    }
+
+    .discount-line {
+        color: #2e7d32;
+        font-weight: 600;
+    }
+
+    .points-badge {
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.2rem 0.6rem;
+        border-radius: 12px;
+        background: #ece4d8;
+        color: #8b7355;
+    }
+
+    .points-badge.points-redeemable {
+        background: #fff3e0;
+        color: #e65100;
+        animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(230, 81, 0, 0.2); }
+        50% { box-shadow: 0 0 8px 2px rgba(230, 81, 0, 0.3); }
+    }
+
+        /* ── High Contrast ── */
+    .order-page.high-contrast {
+        background: #000;
+        color: #fff;
+    }
+
+    .order-page.high-contrast .order-header,
+    .order-page.high-contrast .cart-panel,
+    .order-page.high-contrast .cat-pill,
+    .order-page.high-contrast .item-card,
+    .order-page.high-contrast .cart-card,
+    .order-page.high-contrast .idle-card,
+    .order-page.high-contrast .hero-banner {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        box-shadow: none;
+    }
+
+    .order-page.high-contrast .order-header {
+        border-bottom: 2px solid #fff;
+    }
+
+    .order-page.high-contrast .cart-panel {
+        border-left: 2px solid #fff;
+    }
+
+    .order-page.high-contrast .cart-summary,
+    .order-page.high-contrast .total-line,
+    .order-page.high-contrast .modal-header {
+        border-color: #fff;
+    }
+
+    .order-page.high-contrast .order-header h1,
+    .order-page.high-contrast .welcome-text,
+    .order-page.high-contrast .points-badge,
+    .order-page.high-contrast .cat-label,
+    .order-page.high-contrast .section-title,
+    .order-page.high-contrast .item-name,
+    .order-page.high-contrast .cart-title,
+    .order-page.high-contrast .cart-card-name,
+    .order-page.high-contrast .summary-line,
+    .order-page.high-contrast .total-line,
+    .order-page.high-contrast .idle-title,
+    .order-page.high-contrast .idle-text,
+    .order-page.high-contrast .muted-text,
+    .order-page.high-contrast .cart-empty,
+    .order-page.high-contrast .cart-card-details,
+    .order-page.high-contrast .price-struck,
+    .order-page.high-contrast .hero-text p,
+    .order-page.high-contrast .hero-text h2 {
+        color: #fff;
+    }
+
+    .order-page.high-contrast .header-btn,
+    .order-page.high-contrast .pay-btn,
+    .order-page.high-contrast .reset-btn,
+    .order-page.high-contrast .redeem-toggle,
+    .order-page.high-contrast .cart-remove,
+    .order-page.high-contrast .confirm-exit-btn,
+    .order-page.high-contrast .btn-primary,
+    .order-page.high-contrast .btn-ghost {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+    }
+
+    .order-page.high-contrast .header-btn:hover,
+    .order-page.high-contrast .pay-btn:hover:not(:disabled),
+    .order-page.high-contrast .reset-btn:hover,
+    .order-page.high-contrast .redeem-toggle:hover:not(:disabled),
+    .order-page.high-contrast .cart-remove:hover,
+    .order-page.high-contrast .confirm-exit-btn:hover,
+    .order-page.high-contrast .btn-primary:hover,
+    .order-page.high-contrast .btn-ghost:hover {
+        background: #fff;
+        color: #000;
+        transform: none;
+        opacity: 1;
+    }
+
+    .order-page.high-contrast .cat-pill.active{
+        background-color: yellow;
+    }
+
+    .order-page.high-contrast .redeem-toggle.active,
+    .order-page.high-contrast .points-badge,
+    .order-page.high-contrast .points-badge.points-redeemable,
+    .order-page.high-contrast .free-drink-banner,
+    .order-page.high-contrast .cart-discount-banner,
+    .order-page.high-contrast .redeem-label,
+    .order-page.high-contrast .cart-card.redeemed {
+        background: #fff;
+        color: #000;
+        border-color: #fff;
+        animation: none;
+        box-shadow: none;
+    }
+
+    .order-page.high-contrast .item-price,
+    .order-page.high-contrast .cart-card-price,
+    .order-page.high-contrast .sold-out,
+    .order-page.high-contrast .discount-line,
+    .order-page.high-contrast .tax-line {
+        color: #fff;
+    }
+
+    .order-page.high-contrast .add-icon {
+        background: #fff;
+        color: #000;
+    }
+
+    .order-page.high-contrast .idle-overlay {
+        background: rgba(0, 0, 0, 0.9);
+    }
+
+
+.order-page.high-contrast .cat-pill {
+    background: #000;
+    color: #fff;
+    border: 2px solid #fff;
+}
+
+.order-page.high-contrast .cat-pill .cat-label {
+    color: #fff;
+}
+
+.order-page.high-contrast .cat-pill.active {
+    background: #ffff00;
+    color: #000;
+    border-color: #ffff00;
+}
+
+.zoom-controls.high-contrast>button{
+    background: #ffff00;
+    color: #000;
+}
+
+.order-page.high-contrast .cat-pill.active .cat-label {
+    color: #000;
+}
+
+    /* ── Screen Magnifier ── */
+    .order-page.magnifier-on {
+        font-size: 1.2em;
+    }
+
+    .order-page.magnifier-on .hero-text h2 {
+        font-size: 2rem;
+    }
+
+    .order-page.magnifier-on .hero-text p,
+    .order-page.magnifier-on .welcome-text,
+    .order-page.magnifier-on .cat-label,
+    .order-page.magnifier-on .muted-text,
+    .order-page.magnifier-on .cart-empty,
+    .order-page.magnifier-on .cart-card-details,
+    .order-page.magnifier-on .summary-line,
+    .order-page.magnifier-on .idle-text {
+        font-size: 1rem;
+    }
+
+    .order-page.magnifier-on .section-title,
+    .order-page.magnifier-on .cart-title,
+    .order-page.magnifier-on .idle-title {
+        font-size: 1.75rem;
+    }
+
+    .order-page.magnifier-on .header-btn,
+    .order-page.magnifier-on .pay-btn,
+    .order-page.magnifier-on .reset-btn,
+    .order-page.magnifier-on .redeem-toggle,
+    .order-page.magnifier-on .confirm-exit-btn,
+    .order-page.magnifier-on .cat-pill,
+    .order-page.magnifier-on .item-card,
+    .order-page.magnifier-on .cart-card {
+        font-size: 1rem;
+    }
+
+    .order-page.magnifier-on .item-name,
+    .order-page.magnifier-on .cart-card-name {
+        font-size: 1.1rem;
+    }
+
+    .order-page.magnifier-on .item-price,
+    .order-page.magnifier-on .cart-card-price,
+    .order-page.magnifier-on .total-line {
+        font-size: 1.2rem;
+    }
+
+    .order-page.magnifier-on .item-icon,
+    .order-page.magnifier-on .cart-card-icon,
+    .order-page.magnifier-on .hero-emoji {
+        transform: scale(1.15);
+    }
+
+    .order-page.magnifier-on .header-btn,
+    .order-page.magnifier-on .pay-btn,
+    .order-page.magnifier-on .reset-btn,
+    .order-page.magnifier-on .redeem-toggle,
+    .order-page.magnifier-on .confirm-exit-btn {
+        padding: 0.75rem 1.25rem;
+    }
+
+    .order-page.magnifier-on .cat-pill {
+        min-width: 96px;
+        padding: 1rem 0.75rem;
+    }
+
+    .order-page.magnifier-on .item-card {
+        padding: 1.5rem;
+    }
+
+    .order-page.magnifier-on .cart-card {
+        padding: 1rem;
+    }
+    
+
+    .order-page.magnifier-on .cart-remove {
+        width: 32px;
+        height: 32px;
+        font-size: 1.2rem;
     }
 </style>

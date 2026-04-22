@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
  * @param totalPrice    The subtotal of all items before the tip.
  * @param tipAmount     The tip amount added by the customer.
  * @param paymentMethod The payment method used (e.g. {@code "CASH"}, {@code "CARD"}).
+ * @param pointsEarned  The number of reward points earned from this order.
  */
 public record Order(
         int orderId,
@@ -22,6 +23,7 @@ public record Order(
         LocalDateTime timestamp,
         BigDecimal totalPrice,
         BigDecimal tipAmount,
-        String paymentMethod
+        String paymentMethod,
+        int pointsEarned
 ) {
 }

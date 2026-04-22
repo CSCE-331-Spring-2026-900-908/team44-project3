@@ -107,10 +107,16 @@ export async function addMenuItem(item: Omit<MenuItem, 'menuItemId'>): Promise<n
 }
 
 export async function updateMenuItem(item: MenuItem): Promise<void> {
-    await request<void>(`/menu/items/${String(item.menuItemId)}`, {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE}/menu/items/${String(item.menuItemId)}`, {
         method: 'PUT',
+        headers,
         body: JSON.stringify(item)
     });
+    if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
 }
 
 export async function deleteMenuItem(id: number): Promise<void> {
@@ -175,7 +181,15 @@ export async function deleteInventoryItem(id: number): Promise<void> {
 
 // Customers
 export async function findCustomerByPhone(phone: string): Promise<Customer | null> {
-    return request<Customer | null>(`/customers/lookup?phone=${encodeURIComponent(phone)}`);
+    const res = await fetch(`${BASE}/customers/lookup?phone=${encodeURIComponent(phone)}`, {
+        headers: {
+            'Content-Type': 'application/json',
+            ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {})
+        }
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+    return res.json() as Promise<Customer>;
 }
 
 // Customers
@@ -192,11 +206,12 @@ export async function submitOrder(
     customerId: number | null,
     paymentMethod: string,
     tipAmount: number,
-    cart: CartItem[]
+    cart: CartItem[],
+    redeemedIndices: number[] = []
 ): Promise<Order | null> {
     return request<Order | null>('/orders', {
         method: 'POST',
-        body: JSON.stringify({ employeeId, customerId, paymentMethod, tipAmount, cart })
+        body: JSON.stringify({ employeeId, customerId, paymentMethod, tipAmount, cart, redeemedIndices })
     });
 }
 
@@ -252,4 +267,18 @@ export async function createRestockOrder(
         method: 'POST',
         body: JSON.stringify({ employeeId, inventoryId, quantity })
     });
+}
+
+// Display
+
+export async function getKitchenOrders(): Promise<any[]> {
+    return request<any[]>('/display/kitchen');
+}
+
+export async function getPickupOrders(): Promise<any[]> {
+    return request<any[]>('/display/pickup');
+}
+
+export async function getDisplayMenu(): Promise<MenuItem[]> {
+    return request<any[]>('/display/menu');
 }

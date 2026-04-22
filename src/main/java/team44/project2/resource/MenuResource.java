@@ -47,7 +47,7 @@ public class MenuResource {
     public Response updateItem(@PathParam("id") int id, MenuItem item) {
         MenuItem updated = new MenuItem(
                 id, item.name(), item.category(),
-                item.size(), item.basePrice(), item.isAvailable()
+                item.size(), item.basePrice(), item.isAvailable(), item.isHot()
         );
         menuService.updateMenuItem(updated);
         return Response.ok().build();

@@ -7,6 +7,9 @@ import team44.project2.model.menu.MenuItem;
 import team44.project2.model.order.CartItem;
 import team44.project2.model.order.Order;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.sql.*;
@@ -47,6 +50,39 @@ public class OrderService {
               AND mc.menu_item_id = ?
             """;
 
+    private static final String GET_KITCHEN_ORDERS = """
+            SELECT
+                o.order_id,
+                o.timestamp,
+                m.name
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN menu_items m ON oi.menu_item_id = m.menu_item_id
+            WHERE oi.parent_item_id IS NULL
+            AND o.timestamp >= NOW() - INTERVAL '2 minutes'
+            ORDER BY o.timestamp DESC
+        """;
+
+    private static final String GET_PICKUP_ORDERS = """
+            SELECT order_id, timestamp
+            FROM orders
+            WHERE timestamp BETWEEN NOW() - INTERVAL '5 minutes' AND NOW() - INTERVAL '2 minutes'
+            ORDER BY timestamp DESC
+        """;
+    private static final String ADD_REWARD_POINTS = """
+            UPDATE customers
+            SET reward_points = reward_points + ?
+            WHERE customer_id = ?
+            """;
+
+    private static final String DEDUCT_REWARD_POINTS = """
+            UPDATE customers
+            SET reward_points = reward_points - ?
+            WHERE customer_id = ? AND reward_points >= ?
+            """;
+
+    private static final int POINTS_PER_REDEEM = 10;
+
     @Inject
     DataSource dataSource;
 
@@ -68,11 +104,22 @@ public class OrderService {
             Integer customerId,
             String paymentMethod,
             BigDecimal tipAmount,
-            List<CartItem> cart
+            List<CartItem> cart,
+            List<Integer> redeemedIndices
     ) {
         BigDecimal totalPrice = cart.stream()
                 .map(CartItem::totalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Calculate discount: base price of each redeemed item (add-ons still charged)
+        BigDecimal redeemDiscount = BigDecimal.ZERO;
+        java.util.Set<Integer> redeemedSet = new java.util.HashSet<>(redeemedIndices);
+        for (int idx : redeemedSet) {
+            if (idx >= 0 && idx < cart.size()) {
+                redeemDiscount = redeemDiscount.add(cart.get(idx).item().basePrice());
+            }
+        }
+        BigDecimal chargedPrice = totalPrice.subtract(redeemDiscount);
 
         try (Connection conn = dataSource.getConnection()) {
             conn.setAutoCommit(false);
@@ -80,7 +127,7 @@ public class OrderService {
             try {
                 int orderId = insertOrder(
                         conn, employeeId, customerId,
-                        totalPrice, tipAmount, paymentMethod
+                        chargedPrice, tipAmount, paymentMethod
                 );
 
                 for (CartItem cartItem : cart) {
@@ -93,12 +140,27 @@ public class OrderService {
                     }
                 }
 
+                // Deduct points for redeemed items
+                int pointsToDeduct = redeemedSet.size() * POINTS_PER_REDEEM;
+                if (customerId != null && pointsToDeduct > 0) {
+                    deductRewardPoints(conn, customerId, pointsToDeduct);
+                }
+
+                // Earn points based on amount actually paid (after discount)
+                int pointsEarned = 0;
+                if (customerId != null) {
+                    pointsEarned = chargedPrice.divideToIntegralValue(BigDecimal.valueOf(5)).intValue();
+                    if (pointsEarned > 0) {
+                        addRewardPoints(conn, customerId, pointsEarned);
+                    }
+                }
+
                 conn.commit();
 
                 return new Order(
                         orderId, employeeId, customerId,
-                        LocalDateTime.now(), totalPrice,
-                        tipAmount, paymentMethod
+                        LocalDateTime.now(), chargedPrice,
+                        tipAmount, paymentMethod, pointsEarned
                 );
             } catch (Exception e) {
                 conn.rollback();
@@ -219,6 +281,77 @@ public class OrderService {
             stmt.setNull(6, Types.VARCHAR);
             stmt.setBigDecimal(7, addOn.basePrice());
             stmt.executeQuery();
+        }
+    }
+    public List<Map<String, Object>> getKitchenOrders() {
+        List<Map<String, Object>> orders = new ArrayList<>();
+
+        try (
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(GET_KITCHEN_ORDERS);
+            ResultSet rs = stmt.executeQuery()
+        ) {
+
+            while (rs.next()) {
+                Map<String, Object> order = new HashMap<>();
+
+                order.put("orderId", rs.getInt("order_id"));
+                order.put("timestamp", rs.getTimestamp("timestamp"));
+                order.put("item", rs.getString("name"));
+
+                orders.add(order);
+            }
+
+        } catch (Exception e) {
+            Log.error("Failed to fetch kitchen orders", e);
+        }
+
+        return orders;
+    }
+    
+    public List<Map<String, Object>> getPickupOrders() {
+        List<Map<String, Object>> orders = new ArrayList<>();
+
+        try (
+            Connection conn = dataSource.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(GET_PICKUP_ORDERS);
+            ResultSet rs = stmt.executeQuery()
+        ) {
+
+            while (rs.next()) {
+                Map<String, Object> order = new HashMap<>();
+
+                order.put("orderId", rs.getInt("order_id"));
+                order.put("timestamp", rs.getTimestamp("timestamp"));
+
+                orders.add(order);
+            }
+
+        } catch (Exception e) {
+            Log.error("Failed to fetch pickup orders", e);
+        }
+
+        return orders;
+    }
+
+
+    private void addRewardPoints(Connection conn, int customerId, int points) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(ADD_REWARD_POINTS)) {
+            stmt.setInt(1, points);
+            stmt.setInt(2, customerId);
+            stmt.executeUpdate();
+        }
+    }
+
+    private void deductRewardPoints(Connection conn, int customerId, int points) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(DEDUCT_REWARD_POINTS)) {
+            stmt.setInt(1, points);
+            stmt.setInt(2, customerId);
+            stmt.setInt(3, points);
+            int updated = stmt.executeUpdate();
+            if (updated == 0) {
+                throw new SQLException("Insufficient reward points for redemption");
+            }
         }
     }
 }

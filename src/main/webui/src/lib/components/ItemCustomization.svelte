@@ -7,11 +7,15 @@
     let {
         open,
         item,
+        highContrast = false,
+        magnifierOn = false,
         onclose,
         onadd
     }: {
         open: boolean;
         item: MenuItem | null;
+        highContrast?: boolean;
+        magnifierOn?: boolean;
         onclose: () => void;
         onadd: (cartItem: CartItem) => void;
     } = $props();
@@ -26,11 +30,18 @@
     let selectedAddOns = $state<MenuItem[]>([]);
     let availableAddOns = $state<MenuItem[]>([]);
 
+    const iceLevelColors: Record<string, string> = {
+        'No Ice': '#e3f2fd',
+        'Less Ice': '#bbdefb',
+        'Regular Ice': '#64b5f6',
+        'Extra Ice': '#1565c0'
+    };
+
     $effect(() => {
         if (open) {
             selectedSize = item?.size ?? 'Medium';
             selectedSweetness = '100%';
-            selectedIce = 'Regular Ice';
+            selectedIce = item?.isHot ? 'Hot' : 'Regular Ice';
             selectedAddOns = [];
             void loadAddOns();
         }
@@ -73,8 +84,8 @@
     }
 </script>
 
-<Modal {open} title={item ? toTitleCase(item.name) : 'Customize'} {onclose} wide>
-    <div class="customize-form">
+<Modal {open} title={item ? toTitleCase(item.name) : 'Customize'} {onclose} wide highContrast={highContrast} magnifierOn={magnifierOn}>
+    <div class="customize-form" class:high-contrast={highContrast} class:magnifier-on={magnifierOn}>
         <section>
             <h4>Size</h4>
             <div class="option-row">
@@ -106,18 +117,27 @@
         </section>
 
         <section>
-            <h4>Ice Level</h4>
-            <div class="option-row">
-                {#each iceLevels as level (level)}
-                    <button
-                        class="option-btn"
-                        class:selected={selectedIce === level}
-                        onclick={() => (selectedIce = level)}
-                    >
-                        {level}
+            <h4>{item?.isHot ? 'Temperature' : 'Ice Level'}</h4>
+            {#if item?.isHot}
+                <div class="option-row">
+                    <button class="option-btn ice-btn hot selected">
+                        Hot
                     </button>
-                {/each}
-            </div>
+                </div>
+            {:else}
+                <div class="option-row">
+                    {#each iceLevels as level (level)}
+                        <button
+                            class="option-btn ice-btn"
+                            class:selected={selectedIce === level}
+                            style="--ice-color: {iceLevelColors[level] ?? '#e3f2fd'}; --ice-text: {level === 'Extra Ice' ? 'white' : '#1565c0'}"
+                            onclick={() => (selectedIce = level)}
+                        >
+                            {level}
+                        </button>
+                    {/each}
+                </div>
+            {/if}
         </section>
 
         {#if availableAddOns.length > 0}
@@ -192,6 +212,19 @@
         border-color: var(--color-primary);
     }
 
+    .option-btn.ice-btn.selected {
+        background: var(--ice-color);
+        color: var(--ice-text);
+        border-color: var(--ice-color);
+    }
+
+    .option-btn.ice-btn.hot {
+        background: #fbe9e7;
+        color: #d84315;
+        border-color: #e64a19;
+        cursor: default;
+    }
+
     .footer {
         display: flex;
         align-items: center;
@@ -203,5 +236,84 @@
     .total {
         font-size: 1.25rem;
         font-weight: 700;
+    }
+
+    .customize-form.high-contrast {
+        color: #fff;
+    }
+
+    .customize-form.high-contrast section h4 {
+        color: #000;
+    }
+
+    .customize-form.high-contrast .option-btn {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        box-shadow: none;
+    }
+
+    .customize-form.high-contrast .option-btn:hover {
+        background: yellow;
+        color: #000;
+        border-color: #fff;
+    }
+
+    .customize-form.high-contrast .option-btn.selected {
+        background: #ffff00;
+        color: #000;
+        border-color: #ffff00;
+    }
+
+    .customize-form.high-contrast .footer {
+        border-top: 2px solid #fff;
+    }
+
+    .customize-form.high-contrast .total {
+        color: black;
+    }
+
+    .customize-form.high-contrast .btn-primary,
+    .customize-form.high-contrast .btn-secondary,
+    .customize-form.high-contrast .btn-ghost,
+    .customize-form.high-contrast .btn-lg {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+    }
+
+    .customize-form.high-contrast .btn-primary:hover,
+    .customize-form.high-contrast .btn-secondary:hover,
+    .customize-form.high-contrast .btn-ghost:hover,
+    .customize-form.high-contrast .btn-lg:hover {
+        background: #fff;
+        color: #000;
+    }
+
+
+    /* Magnifier */
+    .customize-form.magnifier-on {
+        gap: 1.5rem;
+    }
+
+    .customize-form.magnifier-on section h4 {
+        font-size: 1rem;
+    }
+
+    .customize-form.magnifier-on .option-btn {
+        padding: 0.75rem 1.2rem;
+        font-size: 1rem;
+    }
+
+    .customize-form.magnifier-on .total {
+        font-size: 1.5rem;
+    }
+
+    .customize-form.magnifier-on .btn-primary,
+    .customize-form.magnifier-on .btn-secondary,
+    .customize-form.magnifier-on .btn-ghost,
+    .customize-form.magnifier-on .btn-lg {
+        font-size: 1rem;
+        padding: 0.85rem 1.25rem;
     }
 </style>

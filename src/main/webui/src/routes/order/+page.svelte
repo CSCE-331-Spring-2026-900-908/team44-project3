@@ -11,6 +11,7 @@
     import CustomerCheckIn from '$lib/components/CustomerCheckIn.svelte';
     import PaymentModal from '$lib/components/PaymentModal.svelte';
     import TransactionComplete from '$lib/components/TransactionComplete.svelte';
+    import Chatbot from '$lib/components/Chatbot.svelte';
     import LanguageSelector from '$lib/components/LanguageSelector.svelte';
 
     const categoryEmojis: Record<string, string> = {
@@ -599,6 +600,9 @@
     onclose={() => (showComplete = false)}
 />
 
+<!-- Chatbot UI (floating) -->
+<div style="--chatbot-right-offset: calc(340px + 40px);">
+    <Chatbot />
 </div>
 
 <style>

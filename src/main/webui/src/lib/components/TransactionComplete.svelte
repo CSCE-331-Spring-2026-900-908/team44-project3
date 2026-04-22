@@ -27,8 +27,21 @@
 
     type ReceiptStatus = 'idle' | 'printed' | 'emailed';
 
-    let status = '';
-	let sending = false;
+    let sending = false;
+	let receiptSent = false;
+	let status = '';
+
+    let rewardsEmail = 'lukeshull@tamu.edu';
+	let customerName = 'Luke';
+
+    let items = [
+		{ name: 'Classic Milk Tea', quantity: 1, price: 5.50 },
+		{ name: 'Taro Slush', quantity: 2, price: 6.25 }
+	];
+
+	let subtotal = items.reduce((sum, item) => sum + item.quantity * item.price, 0);
+	let tax = subtotal * 0.0825;
+	let totalTest = subtotal + tax;
 
     let receiptStatus = $state<ReceiptStatus>('idle');
     let countdown = $state(10);
@@ -72,19 +85,39 @@
     }
 
     async function handleEmail() {
-        sending = true;
+        if (sending || receiptSent) return;
+
+		sending = true;
 		status = '';
 
 		try {
-			const res = await fetch('http://localhost:8081/email');
+			const res = await fetch('http://localhost:8081/email', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					orderId,
+					rewardsEmail,
+					customerName,
+					items,
+					subtotal,
+					tax,
+					totalTest
+				})
+			});
+
 			const text = await res.text();
-			status = `${res.status}: ${text}`;
+
+			if (!res.ok) {
+				throw new Error(text || 'Failed to send receipt');
+			}
+
+			status = text;
+			receiptSent = true;
 		} catch (err) {
-			status = err instanceof Error ? err.message : 'Request failed';
+			status = err instanceof Error ? err.message : 'Failed to send receipt';
 		} finally {
 			sending = false;
 		}
-        startCountdown();
     }
 
     function handleNoReceipt() {

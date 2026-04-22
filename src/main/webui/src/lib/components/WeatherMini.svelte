@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
+//emojis for api
   const WMO_CODES: Record<number, string> = {
     0:  '☀️',
     1:  '🌤️',
@@ -30,7 +31,9 @@
     99: '⛈️',
   };
 
+//saves values for display
   let temp = $state<number | null>(null);
+  let date = $state<string>('');
   let emoji = $state<string>('🌡️');
   let loading = $state(true);
 
@@ -50,6 +53,7 @@
 
       temp = Math.round(current.temperature_2m);
       emoji = WMO_CODES[current.weather_code] ?? '🌡️';
+      date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     } catch (e) {
       console.error(e);
     } finally {
@@ -65,15 +69,15 @@
 {#if loading}
   <span class="weather-mini">...</span>
 {:else if temp !== null}
-  <span class="weather-mini" title="Current weather">{emoji} {temp}°F</span>
+  <span class="weather-mini" title="Current weather">{emoji} {temp}°F · {date}</span>
 {/if}
 
 <style>
   .weather-mini {
-    font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.8rem;
+    color: rgb(0, 0, 0);
     white-space: nowrap;
-    padding: 0.25rem 0.5rem;
+    padding: 0.2rem 0.5rem;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 6px;
   }

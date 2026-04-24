@@ -64,10 +64,19 @@ public class OrderService {
         """;
 
     private static final String GET_PICKUP_ORDERS = """
-            SELECT order_id, timestamp
-            FROM orders
-            WHERE timestamp BETWEEN NOW() - INTERVAL '5 minutes' AND NOW() - INTERVAL '2 minutes'
-            ORDER BY timestamp DESC
+            SELECT
+                o.order_id,
+                o.timestamp,
+                m.name,
+                m.size,
+                oi.ice_level,
+                oi.sugar_level
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN menu_items m   ON oi.menu_item_id = m.menu_item_id
+            WHERE oi.parent_item_id IS NULL
+            AND o.timestamp BETWEEN NOW() - INTERVAL '7 minutes' AND NOW() - INTERVAL '2 minutes'
+            ORDER BY o.timestamp DESC, o.order_id, oi.order_item_id
         """;
     private static final String ADD_REWARD_POINTS = """
             UPDATE customers

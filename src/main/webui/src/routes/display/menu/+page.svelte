@@ -48,7 +48,7 @@
 </script>
 
 <div class="screen">
-    <h1 class="board-title">Our Menu</h1>
+    <h1 class="board-title">🍽️Our Menu📜</h1>
 
     {#if Object.keys(itemsByCategory).length === 0}
         <p class="empty">Menu unavailable.</p>

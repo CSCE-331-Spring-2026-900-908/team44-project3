@@ -319,28 +319,45 @@ public class OrderService {
     }
     
     public List<Map<String, Object>> getPickupOrders() {
-        List<Map<String, Object>> orders = new ArrayList<>();
+        // LinkedHashMap preserves ORDER BY timestamp DESC ordering
+        Map<Integer, Map<String, Object>> grouped = new java.util.LinkedHashMap<>();
 
         try (
             Connection conn = dataSource.getConnection();
             PreparedStatement stmt = conn.prepareStatement(GET_PICKUP_ORDERS);
             ResultSet rs = stmt.executeQuery()
         ) {
-
             while (rs.next()) {
-                Map<String, Object> order = new HashMap<>();
+                int orderId = rs.getInt("order_id");
 
-                order.put("orderId", rs.getInt("order_id"));
-                order.put("timestamp", rs.getTimestamp("timestamp"));
+                // First time we see this order_id: create the order envelope
+                grouped.computeIfAbsent(orderId, id -> {
+                    Map<String, Object> order = new HashMap<>();
+                    order.put("orderId", id);
+                    order.put("timestamp", rs.getTimestamp("timestamp")); // same for all rows of this order
+                    order.put("items", new ArrayList<Map<String, Object>>());
+                    return order;
+                });
+                // rs not accessible in lambda — safe because computeIfAbsent only runs once per key
+                // but timestamp is set above; for robustness you can also set it outside:
 
-                orders.add(order);
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) grouped.get(orderId).get("items");
+
+                Map<String, Object> item = new HashMap<>();
+                item.put("name", rs.getString("name"));
+                item.put("size", rs.getString("size"));
+                item.put("iceLevel", rs.getString("ice_level"));
+                item.put("sugarLevel", rs.getString("sugar_level"));
+                items.add(item);
             }
 
         } catch (Exception e) {
             Log.error("Failed to fetch pickup orders", e);
         }
 
-        return orders;
+        return new ArrayList<>(grouped.values());
     }
 
 

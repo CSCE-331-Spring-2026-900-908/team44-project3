@@ -51,8 +51,10 @@
                                         <span class="item-size">{item.size}</span>
                                     {/if}
                                 </div>
-                                {#if item.customizations}
-                                    <div class="item-custom">{item.customizations}</div>
+                                {#if item.iceLevel || item.sugarLevel}
+                                    <div class="item-custom">
+                                        {[item.iceLevel, item.sugarLevel].filter(Boolean).join(' · ')}
+                                    </div>
                                 {/if}
                             </li>
                         {/each}

@@ -15,6 +15,9 @@
 	let mirrorHtml = $state('');
 	let observer: MutationObserver | null = null;
 
+	const edgeSize = 26;
+	const visibleMargin = 36;
+
 	function refreshMirror() {
 		if (!targetEl) return;
 		mirrorHtml = targetEl.outerHTML;
@@ -55,9 +58,8 @@
 	}
 
 	function moveLens(clientX: number, clientY: number) {
-		const half = lensSize / 2;
-		x = clamp(clientX, half, window.innerWidth - half);
-		y = clamp(clientY, half, window.innerHeight - half);
+		x = clamp(clientX, visibleMargin, window.innerWidth - visibleMargin);
+		y = clamp(clientY, visibleMargin, window.innerHeight - visibleMargin);
 	}
 
 	function mouseDown(event: MouseEvent) {
@@ -81,7 +83,6 @@
 {#if $magnifierEnabled && targetEl}
 	{@const rect = targetEl.getBoundingClientRect()}
 
-	<!-- LENS -->
 	<div
 		class="lens"
 		style:width={`${lensSize}px`}
@@ -106,28 +107,45 @@
 			</div>
 		</div>
 
-		<!-- RETICLE -->
 		<div class="reticle" aria-hidden="true"></div>
-	</div>
 
-	<!-- DRAG HANDLE -->
-	<button
-		type="button"
-		class="drag-handle"
-		style:left={`${x - 45}px`}
-		style:top={`${y + lensSize / 2 - 22}px`}
-		onmousedown={mouseDown}
-	>
-		Drag
-	</button>
+		<button
+			type="button"
+			class="edge edge-top"
+			onmousedown={mouseDown}
+			aria-label="Drag magnifier from top edge"
+		></button>
+
+		<button
+			type="button"
+			class="edge edge-bottom"
+			onmousedown={mouseDown}
+			aria-label="Drag magnifier from bottom edge"
+		></button>
+
+		<button
+			type="button"
+			class="edge edge-left"
+			onmousedown={mouseDown}
+			aria-label="Drag magnifier from left edge"
+		></button>
+
+		<button
+			type="button"
+			class="edge edge-right"
+			onmousedown={mouseDown}
+			aria-label="Drag magnifier from right edge"
+		></button>
+
+		<div class="drag-label" aria-hidden="true">drag edge</div>
+	</div>
 {/if}
 
 <style>
-	/* LENS */
 	.lens {
 		position: fixed;
 		z-index: 999999;
-		border-radius: 12px; /* square-ish */
+		border-radius: 12px;
 		overflow: hidden;
 		border: 3px solid black;
 		box-shadow: 0 0 0 3px white, 0 10px 30px rgba(0, 0, 0, 0.35);
@@ -155,7 +173,6 @@
 		pointer-events: none !important;
 	}
 
-	/* RETICLE (CENTER CROSSHAIR) */
 	.reticle {
 		position: absolute;
 		left: 50%;
@@ -163,7 +180,7 @@
 		width: 14px;
 		height: 14px;
 		transform: translate(-50%, -50%);
-		border: 1.5px solid rgba(0, 0, 0, 0.75);
+		border: 1.5px solid rgba(0, 0, 0, 0.8);
 		border-radius: 50%;
 		pointer-events: none;
 		z-index: 10;
@@ -173,7 +190,7 @@
 	.reticle::after {
 		content: '';
 		position: absolute;
-		background: rgba(0, 0, 0, 0.75);
+		background: rgba(0, 0, 0, 0.8);
 	}
 
 	.reticle::before {
@@ -192,22 +209,60 @@
 		transform: translateY(-50%);
 	}
 
-	/* DRAG HANDLE */
-	.drag-handle {
-		position: fixed;
-		z-index: 1000000;
-		width: 90px;
-		height: 44px;
-		border-radius: 999px;
-		border: 3px solid white;
-		background: rgba(0, 0, 0, 0.85);
-		color: white;
-		font-weight: 800;
+	.edge {
+		position: absolute;
+		z-index: 20;
+		border: none;
+		padding: 0;
+		margin: 0;
+		background: transparent;
 		cursor: grab;
-		user-select: none;
+		pointer-events: auto;
 	}
 
-	.drag-handle:active {
+	.edge:active {
 		cursor: grabbing;
+	}
+
+	.edge-top {
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 26px;
+	}
+
+	.edge-bottom {
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 26px;
+	}
+
+	.edge-left {
+		left: 0;
+		top: 26px;
+		bottom: 26px;
+		width: 26px;
+	}
+
+	.edge-right {
+		right: 0;
+		top: 26px;
+		bottom: 26px;
+		width: 26px;
+	}
+
+	.drag-label {
+		position: absolute;
+		right: 8px;
+		top: 8px;
+		z-index: 21;
+		padding: 0.2rem 0.45rem;
+		border-radius: 999px;
+		background: rgba(0, 0, 0, 0.75);
+		color: white;
+		font-size: 0.65rem;
+		font-weight: 800;
+		pointer-events: none;
 	}
 </style>

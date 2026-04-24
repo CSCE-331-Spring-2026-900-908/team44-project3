@@ -143,6 +143,7 @@
     });
 
     onMount(() => {
+        $magnifierEnabled = false;
         window.addEventListener('keydown', handleGlobalKeydown);
         window.addEventListener('pointerdown', handleGlobalPointer);
         window.addEventListener('mousemove', resetIdle);
@@ -274,8 +275,8 @@
 </div>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
-<div class="order-page" id="magnifier-root" class:high-contrast={highContrast} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
+<div id="magnifier-root" class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
+<div class="order-page" class:high-contrast={highContrast} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
     <!-- Header -->
     <header class="order-header">
         <div class="header-left">
@@ -488,7 +489,7 @@
         </aside>
     </div>
 </div>
-</div>
+
 
 {#if showConfirmReset}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -607,6 +608,8 @@
 <div style="--chatbot-right-offset: calc(340px + 40px);">
     <Chatbot />
 </div>
+<!-- This is the div for the magnify wrapper -->
+</div> 
 
 <MagnifierOverlay targetSelector="#magnifier-root" />
 

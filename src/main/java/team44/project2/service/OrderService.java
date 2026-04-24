@@ -329,17 +329,15 @@ public class OrderService {
         ) {
             while (rs.next()) {
                 int orderId = rs.getInt("order_id");
+                Timestamp timestamp = rs.getTimestamp("timestamp");
 
-                // First time we see this order_id: create the order envelope
                 grouped.computeIfAbsent(orderId, id -> {
                     Map<String, Object> order = new HashMap<>();
                     order.put("orderId", id);
-                    order.put("timestamp", rs.getTimestamp("timestamp")); // same for all rows of this order
+                    order.put("timestamp", timestamp);
                     order.put("items", new ArrayList<Map<String, Object>>());
                     return order;
                 });
-                // rs not accessible in lambda — safe because computeIfAbsent only runs once per key
-                // but timestamp is set above; for robustness you can also set it outside:
 
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> items =

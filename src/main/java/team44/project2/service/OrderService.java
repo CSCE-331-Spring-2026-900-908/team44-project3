@@ -64,10 +64,19 @@ public class OrderService {
         """;
 
     private static final String GET_PICKUP_ORDERS = """
-            SELECT order_id, timestamp
-            FROM orders
-            WHERE timestamp BETWEEN NOW() - INTERVAL '5 minutes' AND NOW() - INTERVAL '2 minutes'
-            ORDER BY timestamp DESC
+            SELECT
+                o.order_id,
+                o.timestamp,
+                m.name,
+                m.size,
+                oi.ice_level,
+                oi.sugar_level
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN menu_items m   ON oi.menu_item_id = m.menu_item_id
+            WHERE oi.parent_item_id IS NULL
+            AND o.timestamp BETWEEN NOW() - INTERVAL '7 minutes' AND NOW() - INTERVAL '2 minutes'
+            ORDER BY o.timestamp DESC, o.order_id, oi.order_item_id
         """;
     private static final String ADD_REWARD_POINTS = """
             UPDATE customers
@@ -310,28 +319,43 @@ public class OrderService {
     }
     
     public List<Map<String, Object>> getPickupOrders() {
-        List<Map<String, Object>> orders = new ArrayList<>();
+        // LinkedHashMap preserves ORDER BY timestamp DESC ordering
+        Map<Integer, Map<String, Object>> grouped = new java.util.LinkedHashMap<>();
 
         try (
             Connection conn = dataSource.getConnection();
             PreparedStatement stmt = conn.prepareStatement(GET_PICKUP_ORDERS);
             ResultSet rs = stmt.executeQuery()
         ) {
-
             while (rs.next()) {
-                Map<String, Object> order = new HashMap<>();
+                int orderId = rs.getInt("order_id");
+                Timestamp timestamp = rs.getTimestamp("timestamp");
 
-                order.put("orderId", rs.getInt("order_id"));
-                order.put("timestamp", rs.getTimestamp("timestamp"));
+                grouped.computeIfAbsent(orderId, id -> {
+                    Map<String, Object> order = new HashMap<>();
+                    order.put("orderId", id);
+                    order.put("timestamp", timestamp);
+                    order.put("items", new ArrayList<Map<String, Object>>());
+                    return order;
+                });
 
-                orders.add(order);
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) grouped.get(orderId).get("items");
+
+                Map<String, Object> item = new HashMap<>();
+                item.put("name", rs.getString("name"));
+                item.put("size", rs.getString("size"));
+                item.put("iceLevel", rs.getString("ice_level"));
+                item.put("sugarLevel", rs.getString("sugar_level"));
+                items.add(item);
             }
 
         } catch (Exception e) {
             Log.error("Failed to fetch pickup orders", e);
         }
 
-        return orders;
+        return new ArrayList<>(grouped.values());
     }
 
 

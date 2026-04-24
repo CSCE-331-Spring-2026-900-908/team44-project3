@@ -81,6 +81,7 @@
 {#if $magnifierEnabled && targetEl}
 	{@const rect = targetEl.getBoundingClientRect()}
 
+	<!-- LENS -->
 	<div
 		class="lens"
 		style:width={`${lensSize}px`}
@@ -104,8 +105,12 @@
 				{@html mirrorHtml}
 			</div>
 		</div>
+
+		<!-- RETICLE -->
+		<div class="reticle" aria-hidden="true"></div>
 	</div>
 
+	<!-- DRAG HANDLE -->
 	<button
 		type="button"
 		class="drag-handle"
@@ -118,16 +123,17 @@
 {/if}
 
 <style>
+	/* LENS */
 	.lens {
-        position: fixed;
-        z-index: 999999;
-        border-radius: 12px;
-        overflow: hidden;
-        border: 3px solid black;
-        box-shadow: 0 0 0 3px white, 0 10px 30px rgba(0, 0, 0, 0.35);
-        background: white;
-        pointer-events: none;
-    }
+		position: fixed;
+		z-index: 999999;
+		border-radius: 12px; /* square-ish */
+		overflow: hidden;
+		border: 3px solid black;
+		box-shadow: 0 0 0 3px white, 0 10px 30px rgba(0, 0, 0, 0.35);
+		background: white;
+		pointer-events: none;
+	}
 
 	.lens-viewport {
 		position: absolute;
@@ -149,6 +155,44 @@
 		pointer-events: none !important;
 	}
 
+	/* RETICLE (CENTER CROSSHAIR) */
+	.reticle {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 14px;
+		height: 14px;
+		transform: translate(-50%, -50%);
+		border: 1.5px solid rgba(0, 0, 0, 0.75);
+		border-radius: 50%;
+		pointer-events: none;
+		z-index: 10;
+	}
+
+	.reticle::before,
+	.reticle::after {
+		content: '';
+		position: absolute;
+		background: rgba(0, 0, 0, 0.75);
+	}
+
+	.reticle::before {
+		left: 50%;
+		top: -5px;
+		width: 1px;
+		height: 22px;
+		transform: translateX(-50%);
+	}
+
+	.reticle::after {
+		top: 50%;
+		left: -5px;
+		width: 22px;
+		height: 1px;
+		transform: translateY(-50%);
+	}
+
+	/* DRAG HANDLE */
 	.drag-handle {
 		position: fixed;
 		z-index: 1000000;

@@ -24,10 +24,31 @@
         const interval = setInterval(load, 30000);
         return () => clearInterval(interval);
     });
+
+    onMount(() => {
+        load();
+        const interval = setInterval(load, 30000);
+
+        // autoscroll
+        let scrolling = true;
+        const scroll = setInterval(() => {
+            if (!scrolling) return;
+            window.scrollBy({ top: 1, behavior: 'instant' });
+            // reset to top when near bottom
+            if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 5) {
+                window.scrollTo({ top: 0, behavior: 'instant' });
+            }
+        }, 30); // lower = faster scroll
+
+        return () => {
+            clearInterval(interval);
+            clearInterval(scroll);
+        };
+    });
 </script>
 
 <div class="screen">
-    <h1 class="board-title">Our Menu</h1>
+    <h1 class="board-title">🍽️Our Menu📜</h1>
 
     {#if Object.keys(itemsByCategory).length === 0}
         <p class="empty">Menu unavailable.</p>

@@ -22,7 +22,7 @@ public class EmailService {
     // Simple in-memory duplicate protection for now
     private final Set<String> sentOrderIds = ConcurrentHashMap.newKeySet();
 
-    public boolean sendReceiptEmail(ReceiptEmailRequest request) {
+    public boolean sendEmail(ReceiptEmailRequest request) {
         if (request == null || request.orderId == null || request.orderId.isBlank()) {
             throw new IllegalArgumentException("orderId is required");
         }

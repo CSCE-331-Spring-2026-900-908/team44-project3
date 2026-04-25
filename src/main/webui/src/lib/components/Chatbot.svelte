@@ -62,7 +62,7 @@
     });
 </script>
 
-//Styling for Chatbot
+<!-- //Styling for Chatbot -->
 
 <div class="chatbot-root">
     {#if open}

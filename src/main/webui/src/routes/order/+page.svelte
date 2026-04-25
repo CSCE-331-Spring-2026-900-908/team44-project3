@@ -13,6 +13,8 @@
     import TransactionComplete from '$lib/components/TransactionComplete.svelte';
     import Chatbot from '$lib/components/Chatbot.svelte';
     import LanguageSelector from '$lib/components/LanguageSelector.svelte';
+    import { magnifierEnabled } from '$lib/stores/magnifier';
+	import MagnifierOverlay from '$lib/components/MagnifierOverlay.svelte';
 
     const categoryEmojis: Record<string, string> = {
         milk_tea: '\u{1F95B}',
@@ -43,7 +45,6 @@
     let showConfirmExit = $state(false);
 
     let highContrast = $state(false);
-    let magnifierOn = $state(false);
 
     let completedOrderId = $state(0);
     let completedTip = $state(0);
@@ -69,6 +70,10 @@
     let showIdleWarning = $state(false);
     let idleCountdown = $state(IDLE_WARNING);
     let idleTimer: ReturnType<typeof setInterval> | null = null;
+
+    function toggleMagnifier() {
+        $magnifierEnabled = !$magnifierEnabled;
+    }
 
     function resetIdle() {
         idleSeconds = 0;
@@ -123,9 +128,6 @@
             highContrast = !highContrast;
         }
 
-        if (event.key === 'm' || event.key === 'M') {
-            magnifierOn = !magnifierOn;
-        }
     }
 
     function handleGlobalPointer() {
@@ -141,6 +143,7 @@
     });
 
     onMount(() => {
+        $magnifierEnabled = false;
         window.addEventListener('keydown', handleGlobalKeydown);
         window.addEventListener('pointerdown', handleGlobalPointer);
         window.addEventListener('mousemove', resetIdle);
@@ -272,15 +275,15 @@
 </div>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
-<div class="order-page" class:high-contrast={highContrast} class:magnifier-on={magnifierOn} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
+<div id="magnifier-root" class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
+<div class="order-page" class:high-contrast={highContrast} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
     <!-- Header -->
     <header class="order-header">
         <div class="header-left">
             <h1>Boba Bob's</h1>
         </div>
         <div class="header-right">
-            <button class="header-btn accessibility" onclick={() => (magnifierOn = !magnifierOn)}> Screen Magnifier </button>
+            <button class="header-btn accessibility magnifier-toggle" onclick={toggleMagnifier}> Screen Magnifier </button>
             <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}> High Contrast </button>
             <LanguageSelector />
             {#if customer}
@@ -488,6 +491,7 @@
 </div>
 </div>
 
+
 {#if showConfirmReset}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
@@ -563,7 +567,7 @@
     open={showCustomize}
     item={customizeItem}
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onclose={() => (showCustomize = false)}
     onadd={addToCart}
 />
@@ -572,7 +576,7 @@
     open={showCheckIn}
     mode="email"
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onclose={() => (showCheckIn = false)}
     onconfirm={handleCustomerConfirm}
 />
@@ -584,7 +588,7 @@
     {redeemedIndices}
     employeeId={null}
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onclose={() => (showPayment = false)}
     oncomplete={handlePaymentComplete}
 />
@@ -596,7 +600,7 @@
     total={completedTotal}
     pointsEarned={completedPointsEarned}
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onnewsale={newSale}
     onclose={() => (showComplete = false)}
 />
@@ -605,6 +609,10 @@
 <div style="--chatbot-right-offset: calc(340px + 40px);">
     <Chatbot />
 </div>
+<!-- This is the div for the magnify wrapper -->
+</div> 
+
+<MagnifierOverlay targetSelector="#magnifier-root" />
 
 <style>
     /* ── Page ── */
@@ -1378,85 +1386,4 @@
     color: #000;
 }
 
-    /* ── Screen Magnifier ── */
-    .order-page.magnifier-on {
-        font-size: 1.2em;
-    }
-
-    .order-page.magnifier-on .hero-text h2 {
-        font-size: 2rem;
-    }
-
-    .order-page.magnifier-on .hero-text p,
-    .order-page.magnifier-on .welcome-text,
-    .order-page.magnifier-on .cat-label,
-    .order-page.magnifier-on .muted-text,
-    .order-page.magnifier-on .cart-empty,
-    .order-page.magnifier-on .cart-card-details,
-    .order-page.magnifier-on .summary-line,
-    .order-page.magnifier-on .idle-text {
-        font-size: 1rem;
-    }
-
-    .order-page.magnifier-on .section-title,
-    .order-page.magnifier-on .cart-title,
-    .order-page.magnifier-on .idle-title {
-        font-size: 1.75rem;
-    }
-
-    .order-page.magnifier-on .header-btn,
-    .order-page.magnifier-on .pay-btn,
-    .order-page.magnifier-on .reset-btn,
-    .order-page.magnifier-on .redeem-toggle,
-    .order-page.magnifier-on .confirm-exit-btn,
-    .order-page.magnifier-on .cat-pill,
-    .order-page.magnifier-on .item-card,
-    .order-page.magnifier-on .cart-card {
-        font-size: 1rem;
-    }
-
-    .order-page.magnifier-on .item-name,
-    .order-page.magnifier-on .cart-card-name {
-        font-size: 1.1rem;
-    }
-
-    .order-page.magnifier-on .item-price,
-    .order-page.magnifier-on .cart-card-price,
-    .order-page.magnifier-on .total-line {
-        font-size: 1.2rem;
-    }
-
-    .order-page.magnifier-on .item-icon,
-    .order-page.magnifier-on .cart-card-icon,
-    .order-page.magnifier-on .hero-emoji {
-        transform: scale(1.15);
-    }
-
-    .order-page.magnifier-on .header-btn,
-    .order-page.magnifier-on .pay-btn,
-    .order-page.magnifier-on .reset-btn,
-    .order-page.magnifier-on .redeem-toggle,
-    .order-page.magnifier-on .confirm-exit-btn {
-        padding: 0.75rem 1.25rem;
-    }
-
-    .order-page.magnifier-on .cat-pill {
-        min-width: 96px;
-        padding: 1rem 0.75rem;
-    }
-
-    .order-page.magnifier-on .item-card {
-        padding: 1.5rem;
-    }
-
-    .order-page.magnifier-on .cart-card {
-        padding: 1rem;
-    }
-    
-
-    .order-page.magnifier-on .cart-remove {
-        width: 32px;
-        height: 32px;
-        font-size: 1.2rem;
-    }
 </style>

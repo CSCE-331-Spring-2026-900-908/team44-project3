@@ -22,7 +22,7 @@
 </script>
 
 <div class="screen">
-    <h1>Kitchen Orders</h1>
+    <h1 class=kitchen-title>📋 Kitchen Orders</h1>
 
     {#if orders.length === 0}
         <p class="empty">No orders in the last 2 minutes.</p>
@@ -39,6 +39,13 @@
 </div>
 
 <style>
+.kitchen-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--color-primary, #c47a3a);
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.5px;
+}
 .screen {
     padding: 2rem;
     background: var(--color-bg, #f8f4f0);

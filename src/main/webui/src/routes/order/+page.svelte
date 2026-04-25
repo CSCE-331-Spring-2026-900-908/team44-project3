@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { MenuItem, CartItem, Customer } from '$lib/types';
     import { onDestroy, onMount } from 'svelte';
+    import { SvelteSet } from 'svelte/reactivity';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { getCategories, getItemsByCategory } from '$lib/api';
@@ -10,7 +11,10 @@
     import CustomerCheckIn from '$lib/components/CustomerCheckIn.svelte';
     import PaymentModal from '$lib/components/PaymentModal.svelte';
     import TransactionComplete from '$lib/components/TransactionComplete.svelte';
+    import Chatbot from '$lib/components/Chatbot.svelte';
     import LanguageSelector from '$lib/components/LanguageSelector.svelte';
+    import { magnifierEnabled } from '$lib/stores/magnifier';
+	import MagnifierOverlay from '$lib/components/MagnifierOverlay.svelte';
 
     const categoryEmojis: Record<string, string> = {
         milk_tea: '\u{1F95B}',
@@ -30,7 +34,7 @@
     let items = $state<MenuItem[]>([]);
     let itemsLoading = $state(false);
     let cart = $state<CartItem[]>([]);
-    let customer = $state<Customer | null>(getCustomer());
+    let customer = $state(getCustomer());
 
     let customizeItem = $state<MenuItem | null>(null);
     let showCustomize = $state(false);
@@ -41,7 +45,6 @@
     let showConfirmExit = $state(false);
 
     let highContrast = $state(false);
-    let magnifierOn = $state(false);
 
     let completedOrderId = $state(0);
     let completedTip = $state(0);
@@ -50,7 +53,7 @@
 
     const POINTS_PER_REDEEM = 10;
 
-    let redeemedIndices = $state<Set<number>>(new Set());
+    let redeemedIndices = $state(new SvelteSet<number>());
 
     let maxRedeemable = $derived(
         customer ? Math.floor(customer.rewardPoints / POINTS_PER_REDEEM) : 0
@@ -67,6 +70,10 @@
     let showIdleWarning = $state(false);
     let idleCountdown = $state(IDLE_WARNING);
     let idleTimer: ReturnType<typeof setInterval> | null = null;
+
+    function toggleMagnifier() {
+        $magnifierEnabled = !$magnifierEnabled;
+    }
 
     function resetIdle() {
         idleSeconds = 0;
@@ -102,7 +109,7 @@
     function exitToHome() {
         clearIdleTimer();
         clearCustomer();
-        void goto(resolve('/'));
+        void goto(resolve('/customer'));
     }
 
     function handleGlobalKeydown(event: KeyboardEvent) {
@@ -121,9 +128,6 @@
             highContrast = !highContrast;
         }
 
-        if (event.key === 'm' || event.key === 'M') {
-            magnifierOn = !magnifierOn;
-        }
     }
 
     function handleGlobalPointer() {
@@ -139,6 +143,7 @@
     });
 
     onMount(() => {
+        $magnifierEnabled = false;
         window.addEventListener('keydown', handleGlobalKeydown);
         window.addEventListener('pointerdown', handleGlobalPointer);
         window.addEventListener('mousemove', resetIdle);
@@ -191,7 +196,7 @@
 
     function removeFromCart(index: number) {
         cart = cart.filter((_, i) => i !== index);
-        const updated = new Set<number>();
+        const updated = new SvelteSet<number>();
         for (const idx of redeemedIndices) {
             if (idx < index) updated.add(idx);
             else if (idx > index) updated.add(idx - 1);
@@ -200,7 +205,7 @@
     }
 
     function toggleRedeem(index: number) {
-        const next = new Set(redeemedIndices);
+        const next = new SvelteSet(redeemedIndices);
         if (next.has(index)) {
             next.delete(index);
         } else if (next.size < maxRedeemable) {
@@ -227,13 +232,13 @@
         clearIdleTimer();
         clearCustomer();
         showComplete = false;
-        void goto(resolve('/'));
+        void goto(resolve('/customer'));
     }
 
     function startOver() {
         cart = [];
         customer = getCustomer();
-        redeemedIndices = new Set();
+        redeemedIndices = new SvelteSet();
         customizeItem = null;
         showCustomize = false;
         showCheckIn = false;
@@ -270,15 +275,15 @@
 </div>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
-<div class="order-page" class:high-contrast={highContrast} class:magnifier-on={magnifierOn} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
+<div id="magnifier-root" class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
+<div class="order-page" class:high-contrast={highContrast} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
     <!-- Header -->
     <header class="order-header">
         <div class="header-left">
             <h1>Boba Bob's</h1>
         </div>
         <div class="header-right">
-            <button class="header-btn accessibility" onclick={() => (magnifierOn = !magnifierOn)}> Screen Magnifier </button>
+            <button class="header-btn accessibility magnifier-toggle" onclick={toggleMagnifier}> Screen Magnifier </button>
             <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}> High Contrast </button>
             <LanguageSelector />
             {#if customer}
@@ -336,7 +341,9 @@
                         <button
                             class="item-card"
                             class:unavailable={!item.isAvailable}
-                            onclick={() => openCustomization(item)}
+                            onclick={() => {
+                                openCustomization(item);
+                            }}
                             disabled={!item.isAvailable}
                         >
                             <div class="item-icon">
@@ -348,7 +355,20 @@
                             <div class="item-bottom">
                                 <span class="item-price">{formatCurrency(item.basePrice)}</span>
                                 {#if item.isAvailable}
-                                    <span class="add-icon">+</span>
+                                    <span class="add-icon" aria-hidden="true">
+                                        <svg
+                                            viewBox="0 0 12 12"
+                                            width="12"
+                                            height="12"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                        >
+                                            <line x1="6" y1="2" x2="6" y2="10" />
+                                            <line x1="2" y1="6" x2="10" y2="6" />
+                                        </svg>
+                                    </span>
                                 {:else}
                                     <span class="sold-out">Sold Out</span>
                                 {/if}
@@ -407,7 +427,9 @@
                                         <button
                                             class="redeem-toggle"
                                             class:active={redeemedIndices.has(i)}
-                                            onclick={() => toggleRedeem(i)}
+                                            onclick={() => {
+                                                toggleRedeem(i);
+                                            }}
                                             disabled={!redeemedIndices.has(i) && redeemedIndices.size >= maxRedeemable}
                                         >
                                             {redeemedIndices.has(i) ? 'Undo' : 'Redeem'}
@@ -415,8 +437,11 @@
                                     {/if}
                                 </div>
                             </div>
-                            <button class="cart-remove" onclick={() => removeFromCart(i)}
-                                >&times;</button
+                            <button
+                                class="cart-remove"
+                                onclick={() => {
+                                    removeFromCart(i);
+                                }}>&times;</button
                             >
                         </div>
                     {/each}
@@ -464,6 +489,8 @@
         </aside>
     </div>
 </div>
+</div>
+
 
 {#if showConfirmReset}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -474,8 +501,12 @@
     >
         <div
             class="idle-card card"
-            onclick={(e) => e.stopPropagation()}
-            onkeydown={(e) => e.stopPropagation()}
+            onclick={(e) => {
+                e.stopPropagation();
+            }}
+            onkeydown={(e) => {
+                e.stopPropagation();
+            }}
             role="none"
         >
             <p class="idle-title">Reset Cart?</p>
@@ -503,8 +534,12 @@
     >
         <div
             class="idle-card card"
-            onclick={(e) => e.stopPropagation()}
-            onkeydown={(e) => e.stopPropagation()}
+            onclick={(e) => {
+                e.stopPropagation();
+            }}
+            onkeydown={(e) => {
+                e.stopPropagation();
+            }}
             role="none"
         >
             <p class="idle-title">Leave ordering?</p>
@@ -522,7 +557,7 @@
     <div class="idle-overlay" onclick={resetIdle} onkeydown={resetIdle}>
         <div class="idle-card card">
             <p class="idle-title">Still there?</p>
-            <p class="idle-text">Returning to home in {idleCountdown}s...</p>
+            <p class="idle-text">Returning to home in <span class="idle-count">{idleCountdown}</span>s...</p>
             <button class="btn-primary btn-lg" onclick={resetIdle}>I'm still here</button>
         </div>
     </div>
@@ -532,7 +567,7 @@
     open={showCustomize}
     item={customizeItem}
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onclose={() => (showCustomize = false)}
     onadd={addToCart}
 />
@@ -541,7 +576,7 @@
     open={showCheckIn}
     mode="email"
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onclose={() => (showCheckIn = false)}
     onconfirm={handleCustomerConfirm}
 />
@@ -553,7 +588,7 @@
     {redeemedIndices}
     employeeId={null}
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onclose={() => (showPayment = false)}
     oncomplete={handlePaymentComplete}
 />
@@ -565,12 +600,19 @@
     total={completedTotal}
     pointsEarned={completedPointsEarned}
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onnewsale={newSale}
     onclose={() => (showComplete = false)}
 />
 
+<!-- Chatbot UI (floating) -->
+<div style="--chatbot-right-offset: calc(340px + 40px);">
+    <Chatbot />
 </div>
+<!-- This is the div for the magnify wrapper -->
+</div> 
+
+<MagnifierOverlay targetSelector="#magnifier-root" />
 
 <style>
     /* ── Page ── */
@@ -858,9 +900,6 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
-        font-weight: 700;
-        line-height: 1;
         flex-shrink: 0;
     }
 
@@ -1077,6 +1116,13 @@
     .idle-text {
         font-size: 1rem;
         color: #999;
+    }
+
+    .idle-count {
+        display: inline-block;
+        min-width: 1.25em;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
     }
 
     .confirm-actions {
@@ -1340,85 +1386,4 @@
     color: #000;
 }
 
-    /* ── Screen Magnifier ── */
-    .order-page.magnifier-on {
-        font-size: 1.2em;
-    }
-
-    .order-page.magnifier-on .hero-text h2 {
-        font-size: 2rem;
-    }
-
-    .order-page.magnifier-on .hero-text p,
-    .order-page.magnifier-on .welcome-text,
-    .order-page.magnifier-on .cat-label,
-    .order-page.magnifier-on .muted-text,
-    .order-page.magnifier-on .cart-empty,
-    .order-page.magnifier-on .cart-card-details,
-    .order-page.magnifier-on .summary-line,
-    .order-page.magnifier-on .idle-text {
-        font-size: 1rem;
-    }
-
-    .order-page.magnifier-on .section-title,
-    .order-page.magnifier-on .cart-title,
-    .order-page.magnifier-on .idle-title {
-        font-size: 1.75rem;
-    }
-
-    .order-page.magnifier-on .header-btn,
-    .order-page.magnifier-on .pay-btn,
-    .order-page.magnifier-on .reset-btn,
-    .order-page.magnifier-on .redeem-toggle,
-    .order-page.magnifier-on .confirm-exit-btn,
-    .order-page.magnifier-on .cat-pill,
-    .order-page.magnifier-on .item-card,
-    .order-page.magnifier-on .cart-card {
-        font-size: 1rem;
-    }
-
-    .order-page.magnifier-on .item-name,
-    .order-page.magnifier-on .cart-card-name {
-        font-size: 1.1rem;
-    }
-
-    .order-page.magnifier-on .item-price,
-    .order-page.magnifier-on .cart-card-price,
-    .order-page.magnifier-on .total-line {
-        font-size: 1.2rem;
-    }
-
-    .order-page.magnifier-on .item-icon,
-    .order-page.magnifier-on .cart-card-icon,
-    .order-page.magnifier-on .hero-emoji {
-        transform: scale(1.15);
-    }
-
-    .order-page.magnifier-on .header-btn,
-    .order-page.magnifier-on .pay-btn,
-    .order-page.magnifier-on .reset-btn,
-    .order-page.magnifier-on .redeem-toggle,
-    .order-page.magnifier-on .confirm-exit-btn {
-        padding: 0.75rem 1.25rem;
-    }
-
-    .order-page.magnifier-on .cat-pill {
-        min-width: 96px;
-        padding: 1rem 0.75rem;
-    }
-
-    .order-page.magnifier-on .item-card {
-        padding: 1.5rem;
-    }
-
-    .order-page.magnifier-on .cart-card {
-        padding: 1rem;
-    }
-    
-
-    .order-page.magnifier-on .cart-remove {
-        width: 32px;
-        height: 32px;
-        font-size: 1.2rem;
-    }
 </style>

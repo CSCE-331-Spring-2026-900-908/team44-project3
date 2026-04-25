@@ -24,6 +24,15 @@
     ];
 
     $effect(() => {
+        const pending = sessionStorage.getItem('pendingLang');
+        if (pending) {
+            sessionStorage.removeItem('pendingLang');
+            document.cookie = `googtrans=/en/${pending}; path=/`;
+            document.cookie = `googtrans=/en/${pending}; path=/; domain=${location.hostname}`;
+            currentLang = pending;
+            window.location.reload();
+            return;
+        }
         const match = document.cookie.match(/(?:^|;\s*)googtrans=\/en\/([^;]+)/);
         if (match) {
             currentLang = match[1];
@@ -43,6 +52,12 @@
 
     function selectLanguage(code: string) {
         if (code === 'en') {
+            document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            document.cookie = 'googtrans=; path=/; domain=' + location.hostname + '; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        } else if (currentLang !== 'en') {
+            // Google Translate can't switch directly between two non-English languages;
+            // store the target and bounce through English first.
+            sessionStorage.setItem('pendingLang', code);
             document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
             document.cookie = 'googtrans=; path=/; domain=' + location.hostname + '; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         } else {

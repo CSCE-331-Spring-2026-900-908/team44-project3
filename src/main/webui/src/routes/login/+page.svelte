@@ -92,8 +92,6 @@
                 {loading ? 'Signing in...' : 'Sign In'}
             </button>
         </form>
-
-        <a href={resolve('/')} class="back-link">Customer Kiosk</a>
     </div>
 </div>
 
@@ -133,18 +131,5 @@
         display: flex;
         flex-direction: column;
         gap: 1rem;
-    }
-
-    .back-link {
-        display: block;
-        text-align: center;
-        margin-top: 1rem;
-        font-size: 0.875rem;
-        color: var(--color-text-muted);
-        text-decoration: none;
-    }
-
-    .back-link:hover {
-        color: var(--color-primary);
     }
 </style>

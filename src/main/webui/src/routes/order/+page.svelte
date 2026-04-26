@@ -13,6 +13,7 @@
     import TransactionComplete from '$lib/components/TransactionComplete.svelte';
     import Chatbot from '$lib/components/Chatbot.svelte';
     import LanguageSelector from '$lib/components/LanguageSelector.svelte';
+    import WeatherMini from '$lib/components/WeatherMini.svelte';
     import { magnifierEnabled } from '$lib/stores/magnifier';
 	import MagnifierOverlay from '$lib/components/MagnifierOverlay.svelte';
 
@@ -37,7 +38,7 @@
     }
 
     const IDLE_TIMEOUT = 30;
-    const IDLE_WARNING = 10;
+    const IDLE_WARNING = 20;
 
     let categories = $state<string[]>([]);
     let selectedCategory = $state('');
@@ -376,6 +377,8 @@
             <h1>Boba Bob's</h1>
         </div>
         <div class="header-right">
+            <WeatherMini />
+            <button class="header-btn accessibility" onclick={() => (magnifierOn = !magnifierOn)}> Screen Magnifier </button>
             <button class="header-btn accessibility magnifier-toggle" onclick={toggleMagnifier}> Screen Magnifier </button>
             <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}> High Contrast </button>
             <LanguageSelector />
@@ -601,6 +604,7 @@
             </div>
         </aside>
     </div>
+</div>
 </div>
 
 

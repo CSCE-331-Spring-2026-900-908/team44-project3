@@ -13,6 +13,10 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+
+import team44.project2.resource.ChatbotResource.HistoryEntry;
 
 @ApplicationScoped
 public class ChatbotService {
@@ -87,7 +91,7 @@ public class ChatbotService {
     @ConfigProperty(name = "GEMINI_API_KEY", defaultValue = "")
     String geminiApiKey;
 //handles the response fromG GEMINI API
-    public String generateReply(String prompt) {
+    public String generateReply(String prompt, List<HistoryEntry> history) {
         String apiKey = geminiApiKey; 
         if (apiKey == null || apiKey.isBlank()) {
             apiKey = System.getenv("GENAI_API_KEY");
@@ -98,7 +102,16 @@ public class ChatbotService {
 
         String model = System.getenv().getOrDefault("GENAI_MODEL", DEFAULT_MODEL);
         String systemInstruction = System.getenv().getOrDefault("GENAI_SYSTEM_INSTRUCTION", DEFAULT_SYSTEM_INSTRUCTION);
-        String effectivePrompt = systemInstruction + "\n\nUser: " + prompt;
+        
+        // Build conversation history context
+        String historyContext = "";
+        if (history != null && !history.isEmpty()) {
+            historyContext = "\n\nConversation history:\n" + history.stream()
+                .map(h -> (h.from().equals("user") ? "User" : "Boba Bob") + ": " + h.text())
+                .collect(Collectors.joining("\n"));
+        }
+        
+        String effectivePrompt = systemInstruction + historyContext + "\n\nUser: " + prompt;
 
         Client client = Client.builder().apiKey(apiKey).build();
 

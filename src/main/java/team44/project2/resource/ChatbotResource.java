@@ -14,7 +14,9 @@ import team44.project2.service.ChatbotService;
 public class ChatbotResource {
 
 
-    public static record ChatRequest(String prompt) {}
+    public static record ChatRequest(String prompt, java.util.List<HistoryEntry> history) {}
+
+    public static record HistoryEntry(String from, String text) {}
 
     
     //records chatbot responses and any error messages
@@ -34,7 +36,7 @@ public class ChatbotResource {
         }
 
         try {
-            String reply = chatbotService.generateReply(req.prompt());
+            String reply = chatbotService.generateReply(req.prompt(), req.history());
             return Response.ok(new ChatResponse(reply, null)).build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)

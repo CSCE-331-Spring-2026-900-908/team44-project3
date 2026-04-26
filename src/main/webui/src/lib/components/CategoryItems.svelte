@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { MenuItem } from '$lib/types';
-    import { getItemsByCategory } from '$lib/api';
+    import { getItemsByCategory, menuItemImageUrl } from '$lib/api';
     import { toTitleCase, formatCurrency } from '$lib/utils';
 
     let {
@@ -58,6 +58,13 @@
                     onclick={() => { onselect(variants); }}
                     disabled={!anyAvailable}
                 >
+                    <div class="item-icon">
+                        {#if variants[0].hasImage}
+                            <img src={menuItemImageUrl(variants[0].menuItemId)} alt={variants[0].name} class="item-img" />
+                        {:else}
+                            🧋
+                        {/if}
+                    </div>
                     <span class="item-name">{toTitleCase(variants[0].name)}</span>
                     <span class="item-price">
                         {#if variants.length > 1}from&nbsp;{/if}{formatCurrency(minPrice)}
@@ -110,6 +117,21 @@
 
     .item-card.unavailable {
         opacity: 0.5;
+    }
+
+    .item-icon {
+        font-size: clamp(2rem, 3.5vw, 3rem);
+        width: clamp(4.5rem, 9vw, 7rem);
+        height: clamp(5.5rem, 11vw, 8rem);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .item-img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
     }
 
     .item-name {

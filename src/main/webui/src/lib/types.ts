@@ -17,6 +17,7 @@ export interface MenuItem {
     basePrice: number;
     isAvailable: boolean;
     isHot: boolean;
+    hasImage: boolean;
 }
 
 export interface MenuItemContent {

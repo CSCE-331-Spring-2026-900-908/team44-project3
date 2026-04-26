@@ -4,7 +4,7 @@
 
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
-    import { getCategories, getItemsByCategory } from '$lib/api';
+    import { getCategories, getItemsByCategory, menuItemImageUrl } from '$lib/api';
     import { getCustomer, clearCustomer } from '$lib/stores/auth.svelte';
     import { formatCurrency, TAX_RATE, toTitleCase } from '$lib/utils';
     import ItemCustomization from '$lib/components/ItemCustomization.svelte';
@@ -407,7 +407,7 @@
                     <h2>{formatCategory(selectedCategory)}</h2>
                     <p>{itemGroups.length} {itemGroups.length === 1 ? 'item' : 'items'} available</p>
                 </div>
-                <div class="hero-emoji">{categoryEmojis[selectedCategory] ?? '\u{1F964}'}</div>
+                <div class="hero-emoji">{categoryEmojis[selectedCategory] ?? '\u{1F9CB}'}</div>
             </div>
 
             <!-- Category pills -->
@@ -418,7 +418,7 @@
                         class:active={selectedCategory === cat}
                         onclick={() => (selectedCategory = cat)}
                     >
-                        <span class="cat-emoji">{categoryEmojis[cat] ?? '\u{1F964}'}</span>
+                        <span class="cat-emoji">{categoryEmojis[cat] ?? '\u{1F9CB}'}</span>
                         <span class="cat-label">{formatCategory(cat)}</span>
                     </button>
                 {/each}
@@ -445,7 +445,11 @@
                             disabled={!anyAvailable}
                         >
                             <div class="item-icon">
-                                {categoryEmojis[variants[0].category] ?? '\u{1F964}'}
+                                {#if variants[0].hasImage}
+                                    <img src={menuItemImageUrl(variants[0].menuItemId)} alt={variants[0].name} class="item-img" />
+                                {:else}
+                                    {categoryEmojis[variants[0].category] ?? '\u{1F9CB}'}
+                                {/if}
                             </div>
                             <div class="item-info">
                                 <span class="item-name">{toTitleCase(variants[0].name)}</span>
@@ -497,7 +501,11 @@
                         {@const redeemed = redeemedCounts.get(i) ?? 0}
                         <div class="cart-card" class:redeemed={redeemed > 0}>
                             <div class="cart-card-icon">
-                                {categoryEmojis[cartItem.item.category] ?? '\u{1F964}'}
+                                {#if cartItem.item.hasImage}
+                                    <img src={menuItemImageUrl(cartItem.item.menuItemId)} alt={cartItem.item.name} class="cart-img" />
+                                {:else}
+                                    {categoryEmojis[cartItem.item.category] ?? '\u{1F9CB}'}
+                                {/if}
                             </div>
                             <div class="cart-card-info">
                                 <span class="cart-card-name">{toTitleCase(cartItem.item.name)}</span>
@@ -957,8 +965,8 @@
 
     .item-card {
         background: white;
-        border-radius: 16px;
-        padding: clamp(1rem, 2vw, 1.75rem);
+        border-radius: 10px;
+        padding: clamp(0.4rem, 0.8vw, 0.6rem) clamp(0.6rem, 1.2vw, 1rem) clamp(0.75rem, 1.5vw, 1rem);
         border: none;
         display: flex;
         flex-direction: column;
@@ -984,7 +992,18 @@
 
     .item-icon {
         font-size: clamp(2.5rem, 4vw, 3.5rem);
-        margin-bottom: 0.25rem;
+        margin-bottom: 0.1rem;
+        width: clamp(5.75rem, 11.5vw, 9.5rem);
+        height: clamp(6.75rem, 13.5vw, 10.5rem);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .item-img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
     }
 
     .item-info {
@@ -1079,10 +1098,19 @@
         font-size: 3rem;
         flex-shrink: 0;
         width: 50px;
-        height: 50px;
+        height: 60px;
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
+        align-self: flex-start;
+        overflow: hidden;
+        border-radius: 8px;
+    }
+
+    .cart-img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
     }
 
     .cart-card-info {

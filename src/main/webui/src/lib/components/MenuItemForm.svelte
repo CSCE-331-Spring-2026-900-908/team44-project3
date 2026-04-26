@@ -5,7 +5,10 @@
         updateMenuItem,
         getAllInventoryNames,
         getOrAddInventoryItem,
-        addMenuItemContent
+        addMenuItemContent,
+        uploadMenuItemImage,
+        deleteMenuItemImage,
+        menuItemImageUrl
     } from '$lib/api';
     import Modal from './Modal.svelte';
 
@@ -38,6 +41,9 @@
     let inventoryNames = $state<string[]>([]);
     let error = $state('');
     let saving = $state(false);
+    let imageFile = $state<File | null>(null);
+    let imagePreview = $state<string | null>(null);
+    let removeImage = $state(false);
 
     let isEdit = $derived(item !== null && !sizeVariantOf);
     let isSizeVariant = $derived(sizeVariantOf !== null);
@@ -69,8 +75,31 @@
             }
             ingredients = [];
             error = '';
+            imageFile = null;
+            imagePreview = item?.hasImage ? menuItemImageUrl(item.menuItemId) : null;
+            removeImage = false;
         }
     });
+
+    function handleImageSelect(e: Event) {
+        const input = e.target as HTMLInputElement;
+        const file = input.files?.[0] ?? null;
+        imageFile = file;
+        removeImage = false;
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => { imagePreview = reader.result as string; };
+            reader.readAsDataURL(file);
+        } else {
+            imagePreview = item?.hasImage ? menuItemImageUrl(item.menuItemId) : null;
+        }
+    }
+
+    function clearImage() {
+        imageFile = null;
+        imagePreview = null;
+        removeImage = true;
+    }
 
     async function loadInventoryNames() {
         try {
@@ -97,7 +126,9 @@
         saving = true;
         error = '';
         try {
+            let itemId: number;
             if (isEdit && item) {
+                itemId = item.menuItemId;
                 await updateMenuItem({
                     ...item,
                     name,
@@ -108,7 +139,7 @@
                     isHot
                 });
             } else {
-                const newId = await addMenuItem({
+                itemId = await addMenuItem({
                     name,
                     category,
                     size,
@@ -122,11 +153,16 @@
                         ing.name, 'ingredient', 0, 'units', 10, 0
                     );
                     await addMenuItemContent({
-                        menuItemId: newId,
+                        menuItemId: itemId,
                         inventoryId: invId,
                         recipeQuantity: ing.quantity
                     });
                 }
+            }
+            if (imageFile) {
+                await uploadMenuItemImage(itemId, imageFile);
+            } else if (removeImage && isEdit) {
+                await deleteMenuItemImage(itemId);
             }
             onsaved();
             onclose();
@@ -181,6 +217,37 @@
                 </button>
             </div>
         </div>
+
+        <section class="image-section">
+            <div class="section-header">
+                <h4>Image</h4>
+            </div>
+            <div class="image-upload-area">
+                {#if imagePreview}
+                    <div class="image-preview">
+                        <img src={imagePreview} alt="Preview" />
+                        <button type="button" class="remove-img" onclick={clearImage}>
+                            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <line x1="4" y1="4" x2="12" y2="12" />
+                                <line x1="12" y1="4" x2="4" y2="12" />
+                            </svg>
+                        </button>
+                    </div>
+                {:else}
+                    <label class="upload-placeholder" for="mi-image">
+                        <span class="upload-emoji">🧋</span>
+                        <span class="upload-text">Click to upload image</span>
+                    </label>
+                {/if}
+                <input
+                    id="mi-image"
+                    type="file"
+                    accept="image/*"
+                    class="file-input"
+                    onchange={handleImageSelect}
+                />
+            </div>
+        </section>
 
         {#if !isEdit || isSizeVariant}
             <section class="ingredients-section">
@@ -309,6 +376,80 @@
 
     .temp-btn:not(.selected):hover {
         border-color: #999;
+    }
+
+    .image-section {
+        border-top: 1px solid var(--color-border);
+        padding-top: 1rem;
+    }
+
+    .image-upload-area {
+        position: relative;
+    }
+
+    .file-input {
+        display: none;
+    }
+
+    .upload-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        height: 120px;
+        border: 2px dashed var(--color-border);
+        border-radius: var(--radius);
+        cursor: pointer;
+        transition: border-color 0.15s;
+    }
+
+    .upload-placeholder:hover {
+        border-color: var(--color-primary, #d4712a);
+    }
+
+    .upload-emoji {
+        font-size: 2rem;
+    }
+
+    .upload-text {
+        font-size: 0.8rem;
+        color: var(--color-text-muted);
+    }
+
+    .image-preview {
+        position: relative;
+        width: 120px;
+        height: 150px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .image-preview img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    .remove-img {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        cursor: pointer;
+        border: none;
     }
 
     .actions {

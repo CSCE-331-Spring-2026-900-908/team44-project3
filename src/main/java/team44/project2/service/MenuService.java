@@ -31,13 +31,16 @@ public class MenuService {
             ORDER BY category
             """;
 
+    private static final String MENU_COLS = """
+            menu_item_id, name, category, size, base_price, is_available, is_hot, (image IS NOT NULL) AS has_image""";
+
     private static final String GET_ITEMS_BY_CATEGORY = """
-            SELECT *
+            SELECT %s
             FROM menu_items
             WHERE category = ?
             AND is_available = true
             ORDER BY name
-            """;
+            """.formatted(MENU_COLS);
 
     private static final String GET_SIZES_FOR_ITEM = """
             SELECT DISTINCT size
@@ -53,20 +56,20 @@ public class MenuService {
             """;
 
     private static final String GET_ADD_ONS = """
-            SELECT *
+            SELECT %s
             FROM menu_items
             WHERE category = 'topping'
             AND is_available = true
             ORDER BY name
-            """;
+            """.formatted(MENU_COLS);
 
     private static final String GET_ALL_MENU_ITEMS = """
-            SELECT *
+            SELECT %s
             FROM menu_items
             WHERE is_available = true
             AND category != 'topping'
             ORDER BY category, name
-            """;
+            """.formatted(MENU_COLS);
 
     private static final String INSERT_CONTENT = """
             INSERT INTO menu_item_contents (menu_item_id, inventory_id, quantity)
@@ -208,7 +211,8 @@ public class MenuService {
                 rs.getString("size"),
                 rs.getBigDecimal("base_price"),
                 rs.getBoolean("is_available"),
-                rs.getBoolean("is_hot")
+                rs.getBoolean("is_hot"),
+                rs.getBoolean("has_image")
         );
     }
 
@@ -351,5 +355,41 @@ public class MenuService {
             Log.error("Failed to load inventory names", e);
         }
         return names;
+    }
+
+    public byte[] getMenuItemImage(int menuItemId) {
+        String query = "SELECT image FROM menu_items WHERE menu_item_id = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, menuItemId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getBytes("image");
+        } catch (Exception e) {
+            Log.error("Failed to load image for item " + menuItemId, e);
+        }
+        return null;
+    }
+
+    public void saveMenuItemImage(int menuItemId, byte[] imageData) {
+        String query = "UPDATE menu_items SET image = ? WHERE menu_item_id = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setBytes(1, imageData);
+            ps.setInt(2, menuItemId);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            Log.error("Failed to save image for item " + menuItemId, e);
+        }
+    }
+
+    public void deleteMenuItemImage(int menuItemId) {
+        String query = "UPDATE menu_items SET image = NULL WHERE menu_item_id = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, menuItemId);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            Log.error("Failed to delete image for item " + menuItemId, e);
+        }
     }
 }

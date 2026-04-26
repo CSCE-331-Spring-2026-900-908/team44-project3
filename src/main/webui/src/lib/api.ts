@@ -99,7 +99,7 @@ export async function getItemsByCategory(category: string): Promise<MenuItem[]> 
     return request<MenuItem[]>(`/menu/items?category=${encodeURIComponent(category)}`);
 }
 
-export async function addMenuItem(item: Omit<MenuItem, 'menuItemId'>): Promise<number> {
+export async function addMenuItem(item: Omit<MenuItem, 'menuItemId' | 'hasImage'>): Promise<number> {
     return request<number>('/menu/items', {
         method: 'POST',
         body: JSON.stringify(item)
@@ -154,6 +154,27 @@ export async function addMenuItemContent(content: MenuItemContent): Promise<void
         method: 'POST',
         body: JSON.stringify(content)
     });
+}
+
+export function menuItemImageUrl(menuItemId: number): string {
+    return `${BASE}/menu/items/${String(menuItemId)}/image`;
+}
+
+export async function uploadMenuItemImage(menuItemId: number, file: File): Promise<void> {
+    const token = getToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/octet-stream' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE}/menu/items/${String(menuItemId)}/image`, {
+        method: 'POST',
+        headers,
+        body: file
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+}
+
+export async function deleteMenuItemImage(menuItemId: number): Promise<void> {
+    await request<void>(`/menu/items/${String(menuItemId)}/image`, { method: 'DELETE' });
 }
 
 // Inventory

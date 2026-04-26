@@ -20,6 +20,7 @@ public record MenuItem(
         String size,
         BigDecimal basePrice,
         @JsonProperty("isAvailable") boolean isAvailable,
-        @JsonProperty("isHot") boolean isHot
+        @JsonProperty("isHot") boolean isHot,
+        @JsonProperty("hasImage") boolean hasImage
 ) {
 }

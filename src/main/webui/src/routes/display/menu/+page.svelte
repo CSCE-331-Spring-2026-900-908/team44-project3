@@ -48,7 +48,7 @@
 </script>
 
 <div class="screen">
-    <h1 class="board-title">🍽️Our Menu📜</h1>
+    <h1 class="board-title">Our Menu</h1>
 
     {#if Object.keys(itemsByCategory).length === 0}
         <p class="empty">Menu unavailable.</p>
@@ -150,6 +150,7 @@ section {
     margin-bottom: 0.3rem;
     color: #222;
     line-height: 1.3;
+    text-transform: capitalize;
 }
 .item-price {
     font-size: 1rem;

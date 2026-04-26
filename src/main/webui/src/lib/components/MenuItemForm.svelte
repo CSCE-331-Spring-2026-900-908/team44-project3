@@ -17,18 +17,20 @@
     let {
         open,
         item,
+        sizeVariantOf = null,
         onclose,
         onsaved
     }: {
         open: boolean;
         item: MenuItem | null;
+        sizeVariantOf?: MenuItem | null;
         onclose: () => void;
         onsaved: () => void;
     } = $props();
 
     let name = $state('');
     let category = $state('');
-    let size = $state('Medium');
+    let size = $state('regular');
     let basePrice = $state(0);
     let isAvailable = $state(true);
     let isHot = $state(false);
@@ -37,12 +39,20 @@
     let error = $state('');
     let saving = $state(false);
 
-    let isEdit = $derived(item !== null);
+    let isEdit = $derived(item !== null && !sizeVariantOf);
+    let isSizeVariant = $derived(sizeVariantOf !== null);
 
     $effect(() => {
         if (open) {
             void loadInventoryNames();
-            if (item) {
+            if (sizeVariantOf) {
+                name = sizeVariantOf.name;
+                category = sizeVariantOf.category;
+                isHot = sizeVariantOf.isHot;
+                isAvailable = true;
+                size = 'regular';
+                basePrice = sizeVariantOf.basePrice;
+            } else if (item) {
                 name = item.name;
                 category = item.category;
                 size = item.size;
@@ -52,7 +62,7 @@
             } else {
                 name = '';
                 category = '';
-                size = 'Medium';
+                size = 'regular';
                 basePrice = 0;
                 isAvailable = true;
                 isHot = false;
@@ -128,20 +138,21 @@
     }
 </script>
 
-<Modal {open} title={isEdit ? 'Edit Menu Item' : 'Add Menu Item'} {onclose} wide>
+<Modal {open} title={isSizeVariant ? 'Add Size Variant' : isEdit ? 'Edit Menu Item' : 'Add Menu Item'} {onclose} wide>
     <form class="menu-form" onsubmit={(e) => { e.preventDefault(); void save(); }}>
         <div class="form-grid">
             <label for="mi-name">Name</label>
-            <input id="mi-name" bind:value={name} />
+            <input id="mi-name" bind:value={name} disabled={isSizeVariant} />
 
             <label for="mi-category">Category</label>
-            <input id="mi-category" bind:value={category} />
+            <input id="mi-category" bind:value={category} disabled={isSizeVariant} />
 
             <label for="mi-size">Size</label>
             <select id="mi-size" bind:value={size}>
-                <option>Small</option>
-                <option>Medium</option>
-                <option>Large</option>
+                <option value="regular">Regular</option>
+                <option value="Small">Small</option>
+                <option value="Medium">Medium</option>
+                <option value="Large">Large</option>
             </select>
 
             <label for="mi-price">Base Price</label>
@@ -171,7 +182,7 @@
             </div>
         </div>
 
-        {#if !isEdit}
+        {#if !isEdit || isSizeVariant}
             <section class="ingredients-section">
                 <div class="section-header">
                     <h4>Ingredients</h4>

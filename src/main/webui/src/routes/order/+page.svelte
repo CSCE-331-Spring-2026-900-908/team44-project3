@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { MenuItem, CartItem, Customer } from '$lib/types';
     import { onDestroy, onMount } from 'svelte';
-    import { SvelteSet } from 'svelte/reactivity';
+
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { getCategories, getItemsByCategory } from '$lib/api';
@@ -14,6 +14,8 @@
     import Chatbot from '$lib/components/Chatbot.svelte';
     import LanguageSelector from '$lib/components/LanguageSelector.svelte';
     import WeatherMini from '$lib/components/WeatherMini.svelte';
+    import { magnifierEnabled } from '$lib/stores/magnifier';
+	import MagnifierOverlay from '$lib/components/MagnifierOverlay.svelte';
 
     const categoryEmojis: Record<string, string> = {
         milk_tea: '\u{1F95B}',
@@ -24,6 +26,16 @@
         seasonal: '\u{1F338}',
         topping: '\u{1F369}'
     };
+
+    function groupAddOns(addOns: MenuItem[]): [string, number, number][] {
+        const map = new Map<number, { name: string; qty: number; price: number }>();
+        for (const a of addOns) {
+            const existing = map.get(a.menuItemId);
+            if (existing) existing.qty++;
+            else map.set(a.menuItemId, { name: toTitleCase(a.name), qty: 1, price: a.basePrice });
+        }
+        return Array.from(map.values()).map(e => [e.name, e.qty, e.price]);
+    }
 
     const IDLE_TIMEOUT = 30;
     const IDLE_WARNING = 20;
@@ -36,7 +48,10 @@
     let customer = $state(getCustomer());
 
     let customizeItem = $state<MenuItem | null>(null);
+    let customizeVariants = $state<MenuItem[]>([]);
     let showCustomize = $state(false);
+    let editingIndex = $state<number | null>(null);
+    let editingCartItem = $state<CartItem | null>(null);
     let showCheckIn = $state(false);
     let showPayment = $state(false);
     let showComplete = $state(false);
@@ -44,7 +59,6 @@
     let showConfirmExit = $state(false);
 
     let highContrast = $state(false);
-    let magnifierOn = $state(false);
 
     let completedOrderId = $state(0);
     let completedTip = $state(0);
@@ -53,23 +67,41 @@
 
     const POINTS_PER_REDEEM = 10;
 
-    let redeemedIndices = $state(new SvelteSet<number>());
+    let redeemedCounts = $state(new Map<number, number>());
+
+    let totalRedeemed = $derived(
+        Array.from(redeemedCounts.values()).reduce((sum, n) => sum + n, 0)
+    );
 
     let maxRedeemable = $derived(
         customer ? Math.floor(customer.rewardPoints / POINTS_PER_REDEEM) : 0
     );
 
     let discount = $derived(
-        cart.reduce((sum, c, i) => sum + (redeemedIndices.has(i) ? c.item.basePrice : 0), 0)
+        cart.reduce((sum, c, i) => sum + (redeemedCounts.get(i) ?? 0) * c.item.basePrice, 0)
     );
 
-    let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
+    let itemGroups = $derived((() => {
+        const groups = new Map<string, MenuItem[]>();
+        for (const item of items) {
+            const existing = groups.get(item.name);
+            if (existing) existing.push(item);
+            else groups.set(item.name, [item]);
+        }
+        return Array.from(groups.values());
+    })());
+
+    let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice * c.quantity, 0));
     let tax = $derived(Math.round((subtotal - discount) * TAX_RATE * 100) / 100);
 
     let idleSeconds = $state(0);
     let showIdleWarning = $state(false);
     let idleCountdown = $state(IDLE_WARNING);
     let idleTimer: ReturnType<typeof setInterval> | null = null;
+
+    function toggleMagnifier() {
+        $magnifierEnabled = !$magnifierEnabled;
+    }
 
     function resetIdle() {
         idleSeconds = 0;
@@ -124,9 +156,6 @@
             highContrast = !highContrast;
         }
 
-        if (event.key === 'm' || event.key === 'M') {
-            magnifierOn = !magnifierOn;
-        }
     }
 
     function handleGlobalPointer() {
@@ -142,6 +171,7 @@
     });
 
     onMount(() => {
+        $magnifierEnabled = false;
         window.addEventListener('keydown', handleGlobalKeydown);
         window.addEventListener('pointerdown', handleGlobalPointer);
         window.addEventListener('mousemove', resetIdle);
@@ -183,33 +213,99 @@
         }
     }
 
-    function openCustomization(item: MenuItem) {
-        customizeItem = item;
+    function openCustomization(variants: MenuItem[]) {
+        customizeVariants = variants;
+        customizeItem = variants[0] ?? null;
         showCustomize = true;
     }
 
+    function sameAddOns(a: MenuItem[], b: MenuItem[]): boolean {
+        if (a.length !== b.length) return false;
+        const ids = (list: MenuItem[]) => list.map(x => x.menuItemId).sort((x, y) => x - y);
+        const sa = ids(a), sb = ids(b);
+        return sa.every((id, idx) => id === sb[idx]);
+    }
+
     function addToCart(cartItem: CartItem) {
-        cart = [...cart, cartItem];
+        const existingIndex = cart.findIndex(c =>
+            c.item.menuItemId === cartItem.item.menuItemId &&
+            c.size === cartItem.size &&
+            c.sweetness === cartItem.sweetness &&
+            c.iceLevel === cartItem.iceLevel &&
+            sameAddOns(c.addOns, cartItem.addOns)
+        );
+        if (existingIndex >= 0) {
+            cart = cart.map((c, i) =>
+                i === existingIndex ? { ...c, quantity: c.quantity + 1 } : c
+            );
+        } else {
+            cart = [...cart, { ...cartItem, quantity: 1 }];
+        }
     }
 
     function removeFromCart(index: number) {
         cart = cart.filter((_, i) => i !== index);
-        const updated = new SvelteSet<number>();
-        for (const idx of redeemedIndices) {
-            if (idx < index) updated.add(idx);
-            else if (idx > index) updated.add(idx - 1);
+        const updated = new Map<number, number>();
+        for (const [idx, count] of redeemedCounts) {
+            if (idx < index) updated.set(idx, count);
+            else if (idx > index) updated.set(idx - 1, count);
         }
-        redeemedIndices = updated;
+        redeemedCounts = updated;
     }
 
-    function toggleRedeem(index: number) {
-        const next = new SvelteSet(redeemedIndices);
-        if (next.has(index)) {
-            next.delete(index);
-        } else if (next.size < maxRedeemable) {
-            next.add(index);
+    function incrementQuantity(index: number) {
+        cart = cart.map((c, i) =>
+            i === index ? { ...c, quantity: c.quantity + 1 } : c
+        );
+    }
+
+    function decrementQuantity(index: number) {
+        const item = cart[index];
+        if (item && item.quantity <= 1) {
+            removeFromCart(index);
+        } else {
+            cart = cart.map((c, i) =>
+                i === index ? { ...c, quantity: c.quantity - 1 } : c
+            );
         }
-        redeemedIndices = next;
+    }
+
+    function openEditItem(index: number) {
+        editingIndex = index;
+        editingCartItem = cart[index] ?? null;
+        const cartMenuItem = cart[index]?.item;
+        customizeItem = cartMenuItem ?? null;
+        customizeVariants = items.filter(i => i.name === cartMenuItem?.name);
+        if (customizeVariants.length === 0 && cartMenuItem) customizeVariants = [cartMenuItem];
+        showCustomize = true;
+    }
+
+    function saveEditedItem(updatedCartItem: CartItem) {
+        if (editingIndex !== null) {
+            cart = cart.map((c, i) =>
+                i === editingIndex ? updatedCartItem : c
+            );
+            editingIndex = null;
+            editingCartItem = null;
+        }
+    }
+
+    function redeemOne(index: number) {
+        const current = redeemedCounts.get(index) ?? 0;
+        if (totalRedeemed >= maxRedeemable) return;
+        if (current >= cart[index].quantity) return;
+        const next = new Map(redeemedCounts);
+        next.set(index, current + 1);
+        redeemedCounts = next;
+    }
+
+    function unredeemOne(index: number) {
+        const current = redeemedCounts.get(index) ?? 0;
+        if (current <= 0) return;
+        const next = new Map(redeemedCounts);
+        if (current === 1) next.delete(index);
+        else next.set(index, current - 1);
+        redeemedCounts = next;
     }
 
     function handleCustomerConfirm(c: Customer) {
@@ -236,7 +332,7 @@
     function startOver() {
         cart = [];
         customer = getCustomer();
-        redeemedIndices = new SvelteSet();
+        redeemedCounts = new Map();
         customizeItem = null;
         showCustomize = false;
         showCheckIn = false;
@@ -273,8 +369,8 @@
 </div>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
-<div class="order-page" class:high-contrast={highContrast} class:magnifier-on={magnifierOn} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
+<div id="magnifier-root" class="zoom-wrapper" style={`transform: scale(${zoom}); transform-origin: top left;`}>
+<div class="order-page" class:high-contrast={highContrast} onclick={resetIdle} onkeydown={resetIdle} onscroll={resetIdle}>
     <!-- Header -->
     <header class="order-header">
         <div class="header-left">
@@ -283,6 +379,7 @@
         <div class="header-right">
             <WeatherMini />
             <button class="header-btn accessibility" onclick={() => (magnifierOn = !magnifierOn)}> Screen Magnifier </button>
+            <button class="header-btn accessibility magnifier-toggle" onclick={toggleMagnifier}> Screen Magnifier </button>
             <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}> High Contrast </button>
             <LanguageSelector />
             {#if customer}
@@ -308,7 +405,7 @@
             <div class="hero-banner">
                 <div class="hero-text">
                     <h2>{formatCategory(selectedCategory)}</h2>
-                    <p>{items.length} {items.length === 1 ? 'item' : 'items'} available</p>
+                    <p>{itemGroups.length} {itemGroups.length === 1 ? 'item' : 'items'} available</p>
                 </div>
                 <div class="hero-emoji">{categoryEmojis[selectedCategory] ?? '\u{1F964}'}</div>
             </div>
@@ -336,24 +433,28 @@
                 <p class="muted-text">No items in this category.</p>
             {:else}
                 <div class="items-grid">
-                    {#each items as item (item.menuItemId)}
+                    {#each itemGroups as variants (variants[0].name)}
+                        {@const anyAvailable = variants.some(v => v.isAvailable)}
+                        {@const minPrice = Math.min(...variants.map(v => v.basePrice))}
                         <button
                             class="item-card"
-                            class:unavailable={!item.isAvailable}
+                            class:unavailable={!anyAvailable}
                             onclick={() => {
-                                openCustomization(item);
+                                openCustomization(variants);
                             }}
-                            disabled={!item.isAvailable}
+                            disabled={!anyAvailable}
                         >
                             <div class="item-icon">
-                                {categoryEmojis[item.category] ?? '\u{1F964}'}
+                                {categoryEmojis[variants[0].category] ?? '\u{1F964}'}
                             </div>
                             <div class="item-info">
-                                <span class="item-name">{toTitleCase(item.name)}</span>
+                                <span class="item-name">{toTitleCase(variants[0].name)}</span>
                             </div>
                             <div class="item-bottom">
-                                <span class="item-price">{formatCurrency(item.basePrice)}</span>
-                                {#if item.isAvailable}
+                                <span class="item-price">
+                                    {#if variants.length > 1}from&nbsp;{/if}{formatCurrency(minPrice)}
+                                </span>
+                                {#if anyAvailable}
                                     <span class="add-icon" aria-hidden="true">
                                         <svg
                                             viewBox="0 0 12 12"
@@ -382,9 +483,9 @@
         <aside class="cart-panel">
             <h3 class="cart-title">Your Cart</h3>
 
-            {#if customer && maxRedeemable > 0 && maxRedeemable > redeemedIndices.size && cart.length > 0}
+            {#if customer && maxRedeemable > 0 && maxRedeemable > totalRedeemed && cart.length > 0}
                 <div class="free-drink-banner">
-                    You have {maxRedeemable - redeemedIndices.size} free drink{maxRedeemable - redeemedIndices.size > 1 ? 's' : ''}! Tap the <strong>Redeem</strong> button next to any item below.
+                    You have {maxRedeemable - totalRedeemed} free drink{maxRedeemable - totalRedeemed > 1 ? 's' : ''}! Tap the <strong>Redeem</strong> button next to any item below.
                 </div>
             {/if}
 
@@ -393,46 +494,62 @@
                     <p class="cart-empty">Your cart is empty. Browse the menu and add items!</p>
                 {:else}
                     {#each cart as cartItem, i (i)}
-                        <div class="cart-card" class:redeemed={redeemedIndices.has(i)}>
+                        {@const redeemed = redeemedCounts.get(i) ?? 0}
+                        <div class="cart-card" class:redeemed={redeemed > 0}>
                             <div class="cart-card-icon">
                                 {categoryEmojis[cartItem.item.category] ?? '\u{1F964}'}
                             </div>
                             <div class="cart-card-info">
-                                <span class="cart-card-name">{toTitleCase(cartItem.item.name)}</span
-                                >
-                                <span class="cart-card-details">
-                                    {cartItem.size} &middot; {cartItem.sweetness} &middot; {cartItem.iceLevel}
-                                </span>
+                                <span class="cart-card-name">{toTitleCase(cartItem.item.name)}</span>
+                                <span class="cart-card-details">Size: {toTitleCase(cartItem.size)}</span>
+                                <span class="cart-card-details">Sweetness: {cartItem.sweetness}</span>
+                                <span class="cart-card-details">{cartItem.iceLevel}</span>
                                 {#if cartItem.addOns.length > 0}
-                                    <span class="cart-card-details">
-                                        + {cartItem.addOns
-                                            .map((a) => toTitleCase(a.name))
-                                            .join(', ')}
-                                    </span>
+                                    <div class="cart-addons">
+                                        <span class="cart-addons-label">Add-ons:</span>
+                                        {#each groupAddOns(cartItem.addOns) as [name, qty, price]}
+                                            <span class="cart-addon-item">
+                                                {qty > 1 ? `${qty}x ` : ''}{name}
+                                                <span class="cart-addon-price">{formatCurrency(price * qty)}</span>
+                                            </span>
+                                        {/each}
+                                    </div>
                                 {/if}
+                                <div class="cart-qty-row">
+                                    <button class="qty-btn" onclick={() => decrementQuantity(i)}><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="6" x2="10" y2="6" /></svg></button>
+                                    <span class="qty-value">{cartItem.quantity}</span>
+                                    <button class="qty-btn" onclick={() => incrementQuantity(i)}><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="2" x2="6" y2="10" /><line x1="2" y1="6" x2="10" y2="6" /></svg></button>
+                                    <button class="cart-edit-btn" onclick={() => openEditItem(i)}>Edit</button>
+                                </div>
                                 <div class="cart-card-bottom">
-                                    {#if redeemedIndices.has(i)}
-                                        <span class="redeem-label">FREE (reward)</span>
+                                    {#if redeemed > 0}
+                                        <span class="redeem-label">{cartItem.quantity > 1 ? `${redeemed}x ` : ''}FREE (reward)</span>
                                         <span class="cart-card-price">
-                                            <span class="price-struck">{formatCurrency(cartItem.item.basePrice)}</span>
-                                            {formatCurrency(cartItem.totalPrice - cartItem.item.basePrice)}
+                                            <span class="price-struck">{formatCurrency(redeemed * cartItem.item.basePrice)}</span>
+                                            {formatCurrency(cartItem.totalPrice * cartItem.quantity - redeemed * cartItem.item.basePrice)}
                                         </span>
                                     {:else}
-                                        <span class="cart-card-price"
-                                            >{formatCurrency(cartItem.totalPrice)}</span
-                                        >
+                                        <span class="cart-card-price">
+                                            {formatCurrency(cartItem.totalPrice * cartItem.quantity)}
+                                        </span>
                                     {/if}
                                     {#if maxRedeemable > 0 && customer}
-                                        <button
-                                            class="redeem-toggle"
-                                            class:active={redeemedIndices.has(i)}
-                                            onclick={() => {
-                                                toggleRedeem(i);
-                                            }}
-                                            disabled={!redeemedIndices.has(i) && redeemedIndices.size >= maxRedeemable}
-                                        >
-                                            {redeemedIndices.has(i) ? 'Undo' : 'Redeem'}
-                                        </button>
+                                        {#if redeemed > 0}
+                                            <button
+                                                class="redeem-toggle active"
+                                                onclick={() => unredeemOne(i)}
+                                            >
+                                                Undo
+                                            </button>
+                                        {/if}
+                                        {#if redeemed < cartItem.quantity && totalRedeemed < maxRedeemable}
+                                            <button
+                                                class="redeem-toggle"
+                                                onclick={() => redeemOne(i)}
+                                            >
+                                                Redeem
+                                            </button>
+                                        {/if}
                                     {/if}
                                 </div>
                             </div>
@@ -448,10 +565,10 @@
             </div>
 
             <div class="cart-summary">
-                {#if redeemedIndices.size > 0}
+                {#if totalRedeemed > 0}
                     <div class="cart-discount-banner">
-                        {redeemedIndices.size} drink{redeemedIndices.size > 1 ? 's' : ''} redeemed
-                        ({redeemedIndices.size * POINTS_PER_REDEEM} pts)
+                        {totalRedeemed} drink{totalRedeemed > 1 ? 's' : ''} redeemed
+                        ({totalRedeemed * POINTS_PER_REDEEM} pts)
                     </div>
                 {/if}
                 <div class="summary-line">
@@ -489,6 +606,7 @@
     </div>
 </div>
 </div>
+
 
 {#if showConfirmReset}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -564,17 +682,24 @@
 <ItemCustomization
     open={showCustomize}
     item={customizeItem}
+    variants={customizeVariants}
+    {editingCartItem}
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
-    onclose={() => (showCustomize = false)}
+    magnifierOn={false}
+    onclose={() => {
+        showCustomize = false;
+        editingIndex = null;
+        editingCartItem = null;
+    }}
     onadd={addToCart}
+    onsave={saveEditedItem}
 />
 
 <CustomerCheckIn
     open={showCheckIn}
     mode="email"
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onclose={() => (showCheckIn = false)}
     onconfirm={handleCustomerConfirm}
 />
@@ -583,10 +708,10 @@
     open={showPayment}
     {cart}
     {customer}
-    {redeemedIndices}
+    {redeemedCounts}
     employeeId={null}
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onclose={() => (showPayment = false)}
     oncomplete={handlePaymentComplete}
 />
@@ -598,7 +723,7 @@
     total={completedTotal}
     pointsEarned={completedPointsEarned}
     highContrast={highContrast}
-    magnifierOn={magnifierOn}
+    magnifierOn={false}
     onnewsale={newSale}
     onclose={() => (showComplete = false)}
 />
@@ -607,6 +732,10 @@
 <div style="--chatbot-right-offset: calc(340px + 40px);">
     <Chatbot />
 </div>
+<!-- This is the div for the magnify wrapper -->
+</div> 
+
+<MagnifierOverlay targetSelector="#magnifier-root" />
 
 <style>
     /* ── Page ── */
@@ -760,7 +889,7 @@
     /* ── Category Pills ── */
     .category-strip {
         display: flex;
-        gap: 1rem;
+        gap: clamp(0.5rem, 1vw, 1rem);
         margin-bottom: 1.5rem;
         overflow-x: auto;
         padding-bottom: 0.5rem;
@@ -768,11 +897,13 @@
 
     .cat-pill {
         display: flex;
+        flex: 1;
         flex-direction: column;
         align-items: center;
-        gap: 0.4rem;
-        min-width: 80px;
-        padding: 0.75rem 0.5rem;
+        justify-content: center;
+        gap: 0.5rem;
+        min-width: 100px;
+        padding: clamp(0.75rem, 1.5vw, 1.25rem) clamp(0.5rem, 1vw, 1rem);
         border-radius: 16px;
         border: 2px solid transparent;
         background: white;
@@ -792,11 +923,11 @@
     }
 
     .cat-emoji {
-        font-size: 1.5rem;
+        font-size: clamp(1.5rem, 2.5vw, 2.25rem);
     }
 
     .cat-label {
-        font-size: 0.7rem;
+        font-size: clamp(0.7rem, 1vw, 0.95rem);
         font-weight: 600;
         text-transform: capitalize;
         color: #555;
@@ -823,14 +954,14 @@
     /* ── Items Grid ── */
     .items-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(clamp(160px, 18vw, 260px), 1fr));
+        gap: clamp(0.75rem, 1.5vw, 1.25rem);
     }
 
     .item-card {
         background: white;
         border-radius: 16px;
-        padding: 1.25rem;
+        padding: clamp(1rem, 2vw, 1.75rem);
         border: none;
         display: flex;
         flex-direction: column;
@@ -855,7 +986,7 @@
     }
 
     .item-icon {
-        font-size: 2.5rem;
+        font-size: clamp(2.5rem, 4vw, 3.5rem);
         margin-bottom: 0.25rem;
     }
 
@@ -867,7 +998,7 @@
 
     .item-name {
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: clamp(0.95rem, 1.3vw, 1.2rem);
         color: #333;
     }
 
@@ -881,13 +1012,13 @@
 
     .item-price {
         font-weight: 700;
-        font-size: 1rem;
+        font-size: clamp(1rem, 1.3vw, 1.25rem);
         color: #d4712a;
     }
 
     .add-icon {
-        width: 28px;
-        height: 28px;
+        width: clamp(28px, 3vw, 36px);
+        height: clamp(28px, 3vw, 36px);
         border-radius: 50%;
         background: #d4712a;
         color: white;
@@ -976,11 +1107,94 @@
         color: #999;
     }
 
+    .cart-addons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        margin-top: 0.15rem;
+        padding-left: 0.25rem;
+    }
+
+    .cart-addons-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .cart-addon-item {
+        font-size: 0.7rem;
+        color: #666;
+        padding-left: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .cart-addon-price {
+        color: #999;
+        margin-left: 0.5rem;
+        flex-shrink: 0;
+    }
+
     .cart-card-price {
         font-weight: 700;
         font-size: 0.85rem;
         color: #d4712a;
         margin-top: 0.15rem;
+    }
+
+    .cart-qty-row {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 0.25rem;
+    }
+
+    .qty-btn {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 1px solid #d4712a;
+        background: white;
+        color: #d4712a;
+        font-size: 0.9rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        cursor: pointer;
+    }
+
+    .qty-btn:hover {
+        background: #d4712a;
+        color: white;
+    }
+
+    .qty-value {
+        font-weight: 700;
+        font-size: 0.85rem;
+        min-width: 1.2rem;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .cart-edit-btn {
+        margin-left: auto;
+        padding: 0.15rem 0.5rem;
+        border-radius: var(--radius, 8px);
+        border: 1px solid #d4712a;
+        background: transparent;
+        color: #d4712a;
+        font-size: 0.7rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .cart-edit-btn:hover {
+        background: #d4712a;
+        color: white;
     }
 
     .cart-remove {
@@ -1088,7 +1302,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 200;
+        z-index: 10000;
     }
 
     .idle-card {
@@ -1380,85 +1594,4 @@
     color: #000;
 }
 
-    /* ── Screen Magnifier ── */
-    .order-page.magnifier-on {
-        font-size: 1.2em;
-    }
-
-    .order-page.magnifier-on .hero-text h2 {
-        font-size: 2rem;
-    }
-
-    .order-page.magnifier-on .hero-text p,
-    .order-page.magnifier-on .welcome-text,
-    .order-page.magnifier-on .cat-label,
-    .order-page.magnifier-on .muted-text,
-    .order-page.magnifier-on .cart-empty,
-    .order-page.magnifier-on .cart-card-details,
-    .order-page.magnifier-on .summary-line,
-    .order-page.magnifier-on .idle-text {
-        font-size: 1rem;
-    }
-
-    .order-page.magnifier-on .section-title,
-    .order-page.magnifier-on .cart-title,
-    .order-page.magnifier-on .idle-title {
-        font-size: 1.75rem;
-    }
-
-    .order-page.magnifier-on .header-btn,
-    .order-page.magnifier-on .pay-btn,
-    .order-page.magnifier-on .reset-btn,
-    .order-page.magnifier-on .redeem-toggle,
-    .order-page.magnifier-on .confirm-exit-btn,
-    .order-page.magnifier-on .cat-pill,
-    .order-page.magnifier-on .item-card,
-    .order-page.magnifier-on .cart-card {
-        font-size: 1rem;
-    }
-
-    .order-page.magnifier-on .item-name,
-    .order-page.magnifier-on .cart-card-name {
-        font-size: 1.1rem;
-    }
-
-    .order-page.magnifier-on .item-price,
-    .order-page.magnifier-on .cart-card-price,
-    .order-page.magnifier-on .total-line {
-        font-size: 1.2rem;
-    }
-
-    .order-page.magnifier-on .item-icon,
-    .order-page.magnifier-on .cart-card-icon,
-    .order-page.magnifier-on .hero-emoji {
-        transform: scale(1.15);
-    }
-
-    .order-page.magnifier-on .header-btn,
-    .order-page.magnifier-on .pay-btn,
-    .order-page.magnifier-on .reset-btn,
-    .order-page.magnifier-on .redeem-toggle,
-    .order-page.magnifier-on .confirm-exit-btn {
-        padding: 0.75rem 1.25rem;
-    }
-
-    .order-page.magnifier-on .cat-pill {
-        min-width: 96px;
-        padding: 1rem 0.75rem;
-    }
-
-    .order-page.magnifier-on .item-card {
-        padding: 1.5rem;
-    }
-
-    .order-page.magnifier-on .cart-card {
-        padding: 1rem;
-    }
-    
-
-    .order-page.magnifier-on .cart-remove {
-        width: 32px;
-        height: 32px;
-        font-size: 1.2rem;
-    }
 </style>

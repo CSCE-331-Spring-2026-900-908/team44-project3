@@ -70,7 +70,7 @@
                     role,
                     startDate,
                     email,
-                    passwordHash: password || employee.passwordHash,
+                    passwordHash: password,
                     isActive
                 });
             } else {

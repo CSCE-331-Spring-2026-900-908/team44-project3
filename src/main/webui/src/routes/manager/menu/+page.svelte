@@ -8,6 +8,7 @@
     let loading = $state(true);
     let showForm = $state(false);
     let editingItem = $state<MenuItem | null>(null);
+    let sizeVariantOf = $state<MenuItem | null>(null);
 
     $effect(() => {
         void loadItems();
@@ -26,11 +27,19 @@
 
     function openAdd() {
         editingItem = null;
+        sizeVariantOf = null;
         showForm = true;
     }
 
     function openEdit(item: MenuItem) {
         editingItem = item;
+        sizeVariantOf = null;
+        showForm = true;
+    }
+
+    function openAddSize(item: MenuItem) {
+        editingItem = null;
+        sizeVariantOf = item;
         showForm = true;
     }
 
@@ -84,6 +93,7 @@
                     </td>
                     <td class="action-cell">
                         <button class="btn-ghost" onclick={() => { openEdit(item); }}>Edit</button>
+                        <button class="btn-ghost" onclick={() => { openAddSize(item); }}>+ Size</button>
                         <button class="btn-ghost danger-text" onclick={() => { void handleDelete(item); }}>
                             Delete
                         </button>
@@ -97,7 +107,8 @@
 <MenuItemForm
     open={showForm}
     item={editingItem}
-    onclose={() => (showForm = false)}
+    {sizeVariantOf}
+    onclose={() => { showForm = false; sizeVariantOf = null; }}
     onsaved={loadItems}
 />
 

@@ -9,7 +9,7 @@
         open,
         cart,
         customer,
-        redeemedIndices = new Set<number>(),
+        redeemedCounts = new Map<number, number>(),
         employeeId = getEmployeeId(),
         highContrast = false,
         magnifierOn = false,
@@ -19,7 +19,7 @@
         open: boolean;
         cart: CartItem[];
         customer: Customer | null;
-        redeemedIndices?: Set<number>;
+        redeemedCounts?: Map<number, number>;
         employeeId?: number | null;
         highContrast?: boolean;
         magnifierOn?: boolean;
@@ -39,9 +39,9 @@
     let submitting = $state(false);
     let error = $state('');
 
-    let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
+    let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice * c.quantity, 0));
     let discount = $derived(
-        cart.reduce((sum, c, i) => sum + (redeemedIndices.has(i) ? c.item.basePrice : 0), 0)
+        cart.reduce((sum, c, i) => sum + (redeemedCounts.get(i) ?? 0) * c.item.basePrice, 0)
     );
     let tax = $derived(Math.round((subtotal - discount) * TAX_RATE * 100) / 100);
     let tipAmount = $derived(
@@ -80,13 +80,17 @@
         submitting = true;
         error = '';
         try {
+            const redeemedList: number[] = [];
+            for (const [idx, count] of redeemedCounts) {
+                for (let n = 0; n < count; n++) redeemedList.push(idx);
+            }
             const order = await submitOrder(
                 employeeId ?? null,
                 customer?.customerId ?? null,
                 selectedMethod,
                 tipAmount,
                 cart,
-                Array.from(redeemedIndices)
+                redeemedList
             );
             if (order) {
                 oncomplete(order.orderId, tipAmount, total, order.pointsEarned);

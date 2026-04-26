@@ -31,8 +31,13 @@ CREATE TABLE menu_items
     size         VARCHAR(50) NULL,
     base_price   DECIMAL(10, 2),
     is_available BOOLEAN,
-    is_hot       BOOLEAN NOT NULL DEFAULT false,
-    image        BYTEA NULL
+    is_hot       BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE menu_item_images
+(
+    name  VARCHAR(255) PRIMARY KEY,
+    image BYTEA NOT NULL
 );
 
 CREATE TABLE inventory

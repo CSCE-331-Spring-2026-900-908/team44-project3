@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { MenuItem } from '$lib/types';
-    import { getItemsByCategory, menuItemImageUrl } from '$lib/api';
+    import { getItemsByCategory, menuItemImageByName } from '$lib/api';
     import { toTitleCase, formatCurrency } from '$lib/utils';
 
     let {
@@ -60,7 +60,7 @@
                 >
                     <div class="item-icon">
                         {#if variants[0].hasImage}
-                            <img src={menuItemImageUrl(variants[0].menuItemId)} alt={variants[0].name} class="item-img" />
+                            <img src={menuItemImageByName(variants[0].name)} alt={variants[0].name} class="item-img" />
                         {:else}
                             🧋
                         {/if}

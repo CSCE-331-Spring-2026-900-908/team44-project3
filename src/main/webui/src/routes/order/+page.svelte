@@ -4,7 +4,7 @@
 
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
-    import { getCategories, getItemsByCategory, menuItemImageUrl } from '$lib/api';
+    import { getCategories, getItemsByCategory, menuItemImageByName } from '$lib/api';
     import { getCustomer, clearCustomer } from '$lib/stores/auth.svelte';
     import { formatCurrency, TAX_RATE, toTitleCase } from '$lib/utils';
     import ItemCustomization from '$lib/components/ItemCustomization.svelte';
@@ -446,7 +446,7 @@
                         >
                             <div class="item-icon">
                                 {#if variants[0].hasImage}
-                                    <img src={menuItemImageUrl(variants[0].menuItemId)} alt={variants[0].name} class="item-img" />
+                                    <img src={menuItemImageByName(variants[0].name)} alt={variants[0].name} class="item-img" />
                                 {:else}
                                     {categoryEmojis[variants[0].category] ?? '\u{1F9CB}'}
                                 {/if}
@@ -502,7 +502,7 @@
                         <div class="cart-card" class:redeemed={redeemed > 0}>
                             <div class="cart-card-icon">
                                 {#if cartItem.item.hasImage}
-                                    <img src={menuItemImageUrl(cartItem.item.menuItemId)} alt={cartItem.item.name} class="cart-img" />
+                                    <img src={menuItemImageByName(cartItem.item.name)} alt={cartItem.item.name} class="cart-img" />
                                 {:else}
                                     {categoryEmojis[cartItem.item.category] ?? '\u{1F9CB}'}
                                 {/if}

@@ -5,6 +5,7 @@ import jakarta.inject.Inject;
 import io.quarkus.logging.Log;
 import team44.project2.model.menu.MenuItem;
 import team44.project2.model.menu.MenuItemContent;
+import team44.project2.model.menu.MenuItemContentWithName;
 
 import javax.sql.DataSource;
 import java.math.BigDecimal;
@@ -32,7 +33,7 @@ public class MenuService {
             """;
 
     private static final String MENU_COLS = """
-            menu_item_id, name, category, size, base_price, is_available, is_hot, (image IS NOT NULL) AS has_image""";
+            menu_item_id, name, category, size, base_price, is_available, is_hot, EXISTS (SELECT 1 FROM menu_item_images WHERE menu_item_images.name = menu_items.name) AS has_image""";
 
     private static final String GET_ITEMS_BY_CATEGORY = """
             SELECT %s
@@ -230,8 +231,8 @@ public class MenuService {
                 """;
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE_ITEM)) {
-            ps.setString(1, item.name());
-            ps.setString(2, item.category());
+            ps.setString(1, item.name().toLowerCase());
+            ps.setString(2, item.category().toLowerCase());
             ps.setString(3, item.size());
             ps.setBigDecimal(4, item.basePrice());
             ps.setBoolean(5, item.isAvailable());
@@ -249,11 +250,15 @@ public class MenuService {
      * @param menuItemId The primary key of the item to delete.
      */
     public void deleteMenuItem(int menuItemId) {
-        String DELETE_ITEM = "DELETE FROM menu_items WHERE menu_item_id = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(DELETE_ITEM)) {
-            ps.setInt(1, menuItemId);
-            ps.executeUpdate();
+        try (Connection conn = dataSource.getConnection()) {
+            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM menu_item_contents WHERE menu_item_id = ?")) {
+                ps.setInt(1, menuItemId);
+                ps.executeUpdate();
+            }
+            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM menu_items WHERE menu_item_id = ?")) {
+                ps.setInt(1, menuItemId);
+                ps.executeUpdate();
+            }
         } catch (Exception e) {
             Log.error("Failed to delete menu item", e);
         }
@@ -268,8 +273,8 @@ public class MenuService {
     public int addMenuItemAndGetId(MenuItem item) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(INSERT_ITEM, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setString(1, item.name());
-            ps.setString(2, item.category());
+            ps.setString(1, item.name().toLowerCase());
+            ps.setString(2, item.category().toLowerCase());
             ps.setString(3, item.size());
             ps.setBigDecimal(4, item.basePrice());
             ps.setBoolean(5, item.isAvailable());
@@ -298,6 +303,54 @@ public class MenuService {
             ps.executeUpdate();
         } catch (Exception e) {
             Log.error("Failed to link inventory", e);
+        }
+    }
+
+    public List<MenuItemContentWithName> getContentsForItem(int menuItemId) {
+        List<MenuItemContentWithName> contents = new ArrayList<>();
+        String query = "SELECT mic.menu_item_id, mic.inventory_id, mic.quantity, i.item_name FROM menu_item_contents mic JOIN inventory i ON i.inventory_id = mic.inventory_id WHERE mic.menu_item_id = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, menuItemId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                contents.add(new MenuItemContentWithName(
+                        rs.getInt("menu_item_id"),
+                        rs.getInt("inventory_id"),
+                        rs.getBigDecimal("quantity"),
+                        rs.getString("item_name")
+                ));
+            }
+        } catch (Exception e) {
+            Log.error("Failed to load contents for item " + menuItemId, e);
+        }
+        return contents;
+    }
+
+    public void replaceContents(int menuItemId, List<MenuItemContent> contents) {
+        try (Connection conn = dataSource.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                try (PreparedStatement ps = conn.prepareStatement("DELETE FROM menu_item_contents WHERE menu_item_id = ?")) {
+                    ps.setInt(1, menuItemId);
+                    ps.executeUpdate();
+                }
+                try (PreparedStatement ps = conn.prepareStatement(INSERT_CONTENT)) {
+                    for (MenuItemContent c : contents) {
+                        ps.setInt(1, menuItemId);
+                        ps.setInt(2, c.inventoryId());
+                        ps.setBigDecimal(3, c.quantity());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            }
+        } catch (Exception e) {
+            Log.error("Failed to replace contents for item " + menuItemId, e);
         }
     }
 
@@ -357,39 +410,76 @@ public class MenuService {
         return names;
     }
 
-    public byte[] getMenuItemImage(int menuItemId) {
-        String query = "SELECT image FROM menu_items WHERE menu_item_id = ?";
+    public List<MenuItem> getAllMenuItemsForManager() {
+        List<MenuItem> items = new ArrayList<>();
+        String query = "SELECT %s FROM menu_items WHERE category != 'topping' ORDER BY name, size".formatted(MENU_COLS);
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) items.add(mapMenuItem(rs));
+        } catch (Exception e) {
+            Log.error("Failed to load all menu items for manager", e);
+        }
+        return items;
+    }
+
+    public void updateSharedFields(String originalName, String newName, String category, boolean isHot) {
+        String query = "UPDATE menu_items SET name = ?, category = ?, is_hot = ? WHERE name = ? AND category != 'topping'";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
-            ps.setInt(1, menuItemId);
+            ps.setString(1, newName.toLowerCase());
+            ps.setString(2, category.toLowerCase());
+            ps.setBoolean(3, isHot);
+            ps.setString(4, originalName);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            Log.error("Failed to batch update shared fields", e);
+        }
+        if (!originalName.equalsIgnoreCase(newName)) {
+            try (Connection conn = dataSource.getConnection();
+                 PreparedStatement ps = conn.prepareStatement("UPDATE menu_item_images SET name = ? WHERE name = ?")) {
+                ps.setString(1, newName.toLowerCase());
+                ps.setString(2, originalName);
+                ps.executeUpdate();
+            } catch (Exception e) {
+                Log.error("Failed to rename image entry", e);
+            }
+        }
+    }
+
+    public void saveImage(String itemName, byte[] imageData) {
+        String query = "INSERT INTO menu_item_images (name, image) VALUES (?, ?) ON CONFLICT (name) DO UPDATE SET image = EXCLUDED.image";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, itemName.toLowerCase());
+            ps.setBytes(2, imageData);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            Log.error("Failed to save image for " + itemName, e);
+        }
+    }
+
+    public void deleteImage(String itemName) {
+        String query = "DELETE FROM menu_item_images WHERE name = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, itemName);
+            ps.executeUpdate();
+        } catch (Exception e) {
+            Log.error("Failed to delete image for " + itemName, e);
+        }
+    }
+
+    public byte[] getImageByName(String itemName) {
+        String query = "SELECT image FROM menu_item_images WHERE name = ?";
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, itemName);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) return rs.getBytes("image");
         } catch (Exception e) {
-            Log.error("Failed to load image for item " + menuItemId, e);
+            Log.error("Failed to load image for " + itemName, e);
         }
         return null;
-    }
-
-    public void saveMenuItemImage(int menuItemId, byte[] imageData) {
-        String query = "UPDATE menu_items SET image = ? WHERE menu_item_id = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(query)) {
-            ps.setBytes(1, imageData);
-            ps.setInt(2, menuItemId);
-            ps.executeUpdate();
-        } catch (Exception e) {
-            Log.error("Failed to save image for item " + menuItemId, e);
-        }
-    }
-
-    public void deleteMenuItemImage(int menuItemId) {
-        String query = "UPDATE menu_items SET image = NULL WHERE menu_item_id = ?";
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(query)) {
-            ps.setInt(1, menuItemId);
-            ps.executeUpdate();
-        } catch (Exception e) {
-            Log.error("Failed to delete image for item " + menuItemId, e);
-        }
     }
 }

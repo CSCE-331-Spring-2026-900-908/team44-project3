@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { getDisplayMenu, menuItemImageUrl } from '$lib/api';
+    import { getDisplayMenu, menuItemImageByName } from '$lib/api';
 
     let itemsByCategory = $state<Record<string, any[]>>({});
 
@@ -63,7 +63,7 @@
                         <div class="card">
                             {#if item.hasImage}
                                 <div class="img-wrap">
-                                    <img src={menuItemImageUrl(item.menuItemId)} alt={item.name} />
+                                    <img src={menuItemImageByName(item.name)} alt={item.name} />
                                 </div>
                             {:else}
                                 <div class="img-wrap placeholder">🧋</div>

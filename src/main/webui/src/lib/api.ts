@@ -2,6 +2,7 @@ import type {
     Employee,
     MenuItem,
     MenuItemContent,
+    MenuItemContentWithName,
     Inventory,
     Customer,
     CartItem,
@@ -120,7 +121,12 @@ export async function updateMenuItem(item: MenuItem): Promise<void> {
 }
 
 export async function deleteMenuItem(id: number): Promise<void> {
-    await request<void>(`/menu/items/${String(id)}`, { method: 'DELETE' });
+    const headers: Record<string, string> = {};
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE}/menu/items/${String(id)}`, { method: 'DELETE', headers });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
 
 export async function getSizesForItem(menuItemId: number): Promise<string[]> {
@@ -150,31 +156,83 @@ export async function getOrAddInventoryItem(
 }
 
 export async function addMenuItemContent(content: MenuItemContent): Promise<void> {
-    await request<void>('/menu/item-content', {
-        method: 'POST',
-        body: JSON.stringify(content)
-    });
-}
-
-export function menuItemImageUrl(menuItemId: number): string {
-    return `${BASE}/menu/items/${String(menuItemId)}/image`;
-}
-
-export async function uploadMenuItemImage(menuItemId: number, file: File): Promise<void> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const token = getToken();
-    const headers: Record<string, string> = { 'Content-Type': 'application/octet-stream' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`${BASE}/menu/items/${String(menuItemId)}/image`, {
+    const res = await fetch(`${BASE}/menu/item-content`, {
         method: 'POST',
         headers,
-        body: file
+        body: JSON.stringify(content)
     });
     if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
 
-export async function deleteMenuItemImage(menuItemId: number): Promise<void> {
-    await request<void>(`/menu/items/${String(menuItemId)}/image`, { method: 'DELETE' });
+export async function getMenuItemContents(menuItemId: number): Promise<MenuItemContentWithName[]> {
+    return request<MenuItemContentWithName[]>(`/menu/items/${String(menuItemId)}/contents`);
+}
+
+export async function replaceMenuItemContents(menuItemId: number, contents: MenuItemContent[]): Promise<void> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE}/menu/items/${String(menuItemId)}/contents`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(contents)
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+}
+
+let _imgVersion = 0;
+export function bumpImageVersion() { _imgVersion++; }
+
+export function menuItemImageByName(name: string): string {
+    return `${BASE}/menu/items/image?name=${encodeURIComponent(name)}&v=${_imgVersion}`;
+}
+
+export async function getAllMenuItemsForManager(): Promise<MenuItem[]> {
+    return request<MenuItem[]>('/menu/items/all');
+}
+
+export async function updateMenuItemGroup(
+    originalName: string,
+    data: { name: string; category: string; isHot: boolean }
+): Promise<void> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE}/menu/items/group?name=${encodeURIComponent(originalName)}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+}
+
+export async function uploadGroupImage(name: string, file: File): Promise<void> {
+    const token = getToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/octet-stream' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(
+        `${BASE}/menu/items/group/image?name=${encodeURIComponent(name)}`,
+        { method: 'POST', headers, body: file }
+    );
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+}
+
+export async function deleteGroupImage(name: string): Promise<void> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE}/menu/items/group/image?name=${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+        headers
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
 
 // Inventory

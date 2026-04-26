@@ -7,6 +7,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import team44.project2.model.menu.MenuItem;
 import team44.project2.model.menu.MenuItemContent;
+import team44.project2.model.menu.MenuItemContentWithName;
 import team44.project2.service.MenuService;
 
 import java.io.InputStream;
@@ -55,9 +56,9 @@ public class MenuResource {
     }
 
     @GET
-    @Path("/items/{id}/image")
-    public Response getImage(@PathParam("id") int id) {
-        byte[] data = menuService.getMenuItemImage(id);
+    @Path("/items/image")
+    public Response getImageByName(@QueryParam("name") String name) {
+        byte[] data = menuService.getImageByName(name);
         if (data == null) return Response.status(Response.Status.NOT_FOUND).build();
         String mime = "application/octet-stream";
         if (data.length >= 3 && data[0] == (byte) 0xFF && data[1] == (byte) 0xD8)
@@ -71,27 +72,6 @@ public class MenuResource {
         return Response.ok(data, mime)
                 .header("Cache-Control", "public, max-age=3600")
                 .build();
-    }
-
-    @POST
-    @Path("/items/{id}/image")
-    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
-    public Response uploadImage(@PathParam("id") int id, InputStream body) {
-        try {
-            byte[] data = body.readAllBytes();
-            if (data.length == 0) return Response.status(Response.Status.BAD_REQUEST).build();
-            menuService.saveMenuItemImage(id, data);
-            return Response.ok().build();
-        } catch (Exception e) {
-            return Response.serverError().build();
-        }
-    }
-
-    @DELETE
-    @Path("/items/{id}/image")
-    public Response deleteImage(@PathParam("id") int id) {
-        menuService.deleteMenuItemImage(id);
-        return Response.noContent().build();
     }
 
     @DELETE
@@ -120,4 +100,52 @@ public class MenuResource {
         return Response.status(Response.Status.CREATED).build();
     }
 
+    @GET
+    @Path("/items/{id}/contents")
+    public List<MenuItemContentWithName> getContents(@PathParam("id") int id) {
+        return menuService.getContentsForItem(id);
+    }
+
+    @PUT
+    @Path("/items/{id}/contents")
+    public Response replaceContents(@PathParam("id") int id, List<MenuItemContent> contents) {
+        menuService.replaceContents(id, contents);
+        return Response.ok().build();
+    }
+
+    @GET
+    @Path("/items/all")
+    public List<MenuItem> getAllItemsForManager() {
+        return menuService.getAllMenuItemsForManager();
+    }
+
+    @PUT
+    @Path("/items/group")
+    public Response updateGroup(@QueryParam("name") String originalName, GroupUpdatePayload payload) {
+        menuService.updateSharedFields(originalName, payload.name(), payload.category(), payload.isHot());
+        return Response.ok().build();
+    }
+
+    @POST
+    @Path("/items/group/image")
+    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+    public Response uploadGroupImage(@QueryParam("name") String name, InputStream body) {
+        try {
+            byte[] data = body.readAllBytes();
+            if (data.length == 0) return Response.status(Response.Status.BAD_REQUEST).build();
+            menuService.saveImage(name, data);
+            return Response.ok().build();
+        } catch (Exception e) {
+            return Response.serverError().build();
+        }
+    }
+
+    @DELETE
+    @Path("/items/group/image")
+    public Response deleteGroupImage(@QueryParam("name") String name) {
+        menuService.deleteImage(name);
+        return Response.noContent().build();
+    }
+
+    public record GroupUpdatePayload(String name, String category, boolean isHot) {}
 }

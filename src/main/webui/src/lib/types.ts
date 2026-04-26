@@ -20,10 +20,28 @@ export interface MenuItem {
     hasImage: boolean;
 }
 
+export interface MenuItemGroup {
+    name: string;
+    category: string;
+    isHot: boolean;
+    isAvailable: boolean;
+    hasImage: boolean;
+    variants: MenuItem[];
+    minPrice: number;
+    maxPrice: number;
+}
+
 export interface MenuItemContent {
     menuItemId: number;
     inventoryId: number;
-    recipeQuantity: number;
+    quantity: number;
+}
+
+export interface MenuItemContentWithName {
+    menuItemId: number;
+    inventoryId: number;
+    quantity: number;
+    itemName: string;
 }
 
 export interface Inventory {

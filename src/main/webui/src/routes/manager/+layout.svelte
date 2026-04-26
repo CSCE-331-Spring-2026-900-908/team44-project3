@@ -39,7 +39,7 @@
 <div class="manager-layout">
     <aside class="manager-sidebar">
         <div class="sidebar-brand">
-            <h2>Team 44 Boba POS</h2>
+            <h2>Boba Bob's</h2>
             <span class="role-label">Manager</span>
         </div>
 

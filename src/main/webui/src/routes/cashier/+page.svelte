@@ -201,7 +201,7 @@
 <div class="ordering-layout">
     <header class="ordering-header">
         <div class="header-left">
-            <h1>Team 44 Boba POS</h1>
+            <h1>Boba Bob's</h1>
             {#if isManager()}
                 <span class="header-divider"></span>
                 <a href={resolve('/manager')} class="dashboard-link">&larr; Dashboard</a>

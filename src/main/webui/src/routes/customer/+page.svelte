@@ -55,7 +55,7 @@
     <div class="landing-content">
         <div class="hero">
             <img src="/boba.png" alt="" class="hero-img" />
-            <h1>Team 44 Boba</h1>
+            <h1>Boba Bob's</h1>
             <p class="tagline">Fresh bubble tea, made to order.</p>
         </div>
 

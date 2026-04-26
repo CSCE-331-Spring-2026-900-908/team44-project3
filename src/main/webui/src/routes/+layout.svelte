@@ -8,7 +8,7 @@
 
 <svelte:head>
     <link rel="icon" href={favicon} />
-    <title>Team 44 Boba POS</title>
+    <title>Boba Bob's</title>
 </svelte:head>
 
 {@render children()}

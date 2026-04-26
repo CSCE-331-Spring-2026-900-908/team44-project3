@@ -730,6 +730,8 @@
     tip={completedTip}
     total={completedTotal}
     pointsEarned={completedPointsEarned}
+    customerEmail={customer?.email ?? ''}
+    cart={cart}
     highContrast={highContrast}
     magnifierOn={false}
     onnewsale={newSale}

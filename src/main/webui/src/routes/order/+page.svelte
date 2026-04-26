@@ -489,7 +489,6 @@
         </aside>
     </div>
 </div>
-</div>
 
 
 {#if showConfirmReset}

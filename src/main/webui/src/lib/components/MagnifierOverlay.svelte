@@ -23,7 +23,8 @@
 	let showHint = $state(false);
 	let hintTimer: ReturnType<typeof setTimeout> | null = null;
 
-	const grabRingWidth = 55;
+	const grabRingInner = 70;
+	const grabRingOuter = 20;
 
 	function refreshMirror() {
 		if (!targetEl) return;
@@ -73,7 +74,9 @@
 		const dx = clientX - x;
 		const dy = clientY - y;
 		const dist = Math.sqrt(dx * dx + dy * dy);
-		return dist >= lensSize / 2 - grabRingWidth;
+		const outerEdge = lensSize / 2 + grabRingOuter;
+		const innerEdge = lensSize / 2 - grabRingInner;
+		return dist >= innerEdge && dist <= outerEdge;
 	}
 
 	function clickThrough(clientX: number, clientY: number) {

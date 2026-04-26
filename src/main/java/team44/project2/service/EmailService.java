@@ -16,7 +16,17 @@ public class EmailService {
     @Inject
     Mailer mailer;
 
-    public record ReceiptItem(String name, String size, String sweetness, String iceLevel, List<String> addOns, int quantity, BigDecimal unitPrice) {}
+    public record AddOnItem(String name, BigDecimal price) {}
+
+    public record ReceiptItem(
+            String name,
+            String size,
+            String sweetness,
+            String iceLevel,
+            List<AddOnItem> addOns,
+            int quantity,
+            BigDecimal unitPrice
+    ) {}
 
     public boolean sendReceipt(
             String toEmail,
@@ -47,24 +57,64 @@ public class EmailService {
     ) {
         StringBuilder itemRows = new StringBuilder();
         for (ReceiptItem item : items) {
-            String customization = buildCustomizationText(item);
+            BigDecimal lineTotal = item.unitPrice()
+                    .multiply(BigDecimal.valueOf(item.quantity()))
+                    .setScale(2, RoundingMode.HALF_UP);
+
+            // Size / sweetness / ice lines
+            StringBuilder modLines = new StringBuilder();
+            if (item.size() != null && !item.size().isBlank()) {
+                modLines.append("<div style=\"font-size:13px;color:#888;\">Size: ").append(item.size()).append("</div>");
+            }
+            if (item.sweetness() != null && !item.sweetness().isBlank()) {
+                modLines.append("<div style=\"font-size:13px;color:#888;\">Sweetness: ").append(item.sweetness()).append("</div>");
+            }
+            if (item.iceLevel() != null && !item.iceLevel().isBlank()) {
+                modLines.append("<div style=\"font-size:13px;color:#888;\">").append(item.iceLevel()).append("</div>");
+            }
+
+            // Add-ons section
+            StringBuilder addOnRows = new StringBuilder();
+            if (item.addOns() != null && !item.addOns().isEmpty()) {
+                addOnRows.append("<div style=\"margin-top:8px;\">");
+                addOnRows.append("<div style=\"font-size:12px;font-weight:700;color:#555;letter-spacing:0.04em;margin-bottom:4px;\">ADD-ONS:</div>");
+                for (AddOnItem addOn : item.addOns()) {
+                    addOnRows.append("""
+                            <table width="100%%" cellpadding="0" cellspacing="0">
+                              <tr>
+                                <td style="font-size:13px;color:#555;padding:1px 0 1px 8px;">%s</td>
+                                <td style="font-size:13px;color:#555;text-align:right;padding:1px 0;">$%s</td>
+                              </tr>
+                            </table>
+                            """.formatted(
+                            addOn.name(),
+                            addOn.price().setScale(2, RoundingMode.HALF_UP)
+                    ));
+                }
+                addOnRows.append("</div>");
+            }
+
             itemRows.append("""
                     <tr>
-                      <td style="padding:8px 0;border-bottom:1px solid #f0e6d3;">
-                        <strong>%s</strong>%s
+                      <td colspan="2" style="padding:12px 0;border-bottom:1px solid #f0e6d3;">
+                        <table width="100%%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="font-weight:700;font-size:15px;">%s</td>
+                            <td style="font-weight:700;font-size:15px;text-align:right;white-space:nowrap;">
+                              x%d &nbsp; $%s
+                            </td>
+                          </tr>
+                        </table>
                         %s
-                      </td>
-                      <td style="padding:8px 0;border-bottom:1px solid #f0e6d3;text-align:right;white-space:nowrap;">
-                        x%d &nbsp; $%s
+                        %s
                       </td>
                     </tr>
                     """.formatted(
                     item.name(),
-                    item.size() != null && !item.size().isBlank() ? " (" + item.size() + ")" : "",
-                    customization,
                     item.quantity(),
-                    item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()))
-                            .setScale(2, RoundingMode.HALF_UP)
+                    lineTotal,
+                    modLines,
+                    addOnRows
             ));
         }
 
@@ -126,26 +176,5 @@ public class EmailService {
                 total.setScale(2, RoundingMode.HALF_UP),
                 pointsRow
         );
-    }
-
-    private String buildCustomizationText(ReceiptItem item) {
-        StringBuilder sb = new StringBuilder();
-        boolean hasMods = (item.sweetness() != null && !item.sweetness().isBlank())
-                || (item.iceLevel() != null && !item.iceLevel().isBlank())
-                || (item.addOns() != null && !item.addOns().isEmpty());
-        if (!hasMods) return "";
-
-        sb.append("<br><span style=\"font-size:12px;color:#888;\">");
-        if (item.sweetness() != null && !item.sweetness().isBlank()) sb.append(item.sweetness()).append(" sweet");
-        if (item.iceLevel() != null && !item.iceLevel().isBlank()) {
-            if (sb.length() > 49) sb.append(", ");
-            sb.append(item.iceLevel());
-        }
-        if (item.addOns() != null && !item.addOns().isEmpty()) {
-            if (sb.length() > 49) sb.append(" + ");
-            sb.append(String.join(", ", item.addOns()));
-        }
-        sb.append("</span>");
-        return sb.toString();
     }
 }

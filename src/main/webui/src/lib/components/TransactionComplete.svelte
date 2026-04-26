@@ -102,7 +102,7 @@
             size: c.size ?? '',
             sweetness: c.sweetness ?? '',
             iceLevel: c.iceLevel ?? '',
-            addOns: c.addOns.map(a => a.name),
+            addOns: c.addOns.map(a => ({ name: a.name, price: a.basePrice })),
             quantity: c.quantity,
             unitPrice: c.item.basePrice
         }));

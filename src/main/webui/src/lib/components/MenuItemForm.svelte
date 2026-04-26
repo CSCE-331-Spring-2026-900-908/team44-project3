@@ -41,7 +41,7 @@
         open: boolean;
         group: MenuItemGroup | null;
         onclose: () => void;
-        onsaved: () => void;
+        onsaved: (savedName: string) => void;
     } = $props();
 
     let name = $state('');
@@ -282,7 +282,7 @@
                     bumpImageVersion();
                 }
             }
-            onsaved();
+            onsaved(name.toLowerCase());
             onclose();
         } catch {
             error = 'Failed to save menu item.';

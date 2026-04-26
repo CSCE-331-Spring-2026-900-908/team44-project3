@@ -48,13 +48,16 @@
     });
 
     async function loadItems() {
-        loading = true;
+        const scrollY = window.scrollY;
+        const isRefresh = items.length > 0;
+        if (!isRefresh) loading = true;
         try {
             items = await getAllMenuItemsForManager();
         } catch {
             items = [];
         } finally {
             loading = false;
+            requestAnimationFrame(() => window.scrollTo(0, scrollY));
         }
     }
 
@@ -73,6 +76,15 @@
         if (next.has(name)) next.delete(name);
         else next.add(name);
         expandedGroups = next;
+    }
+
+    let updatedName = $state<string | null>(null);
+    let updatedTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function flashUpdated(name: string) {
+        if (updatedTimer) clearTimeout(updatedTimer);
+        updatedName = name;
+        updatedTimer = setTimeout(() => { updatedName = null; }, 3000);
     }
 
     async function handleDeleteGroup(group: MenuItemGroup) {
@@ -179,8 +191,12 @@
     open={showForm}
     group={editingGroup}
     onclose={() => { showForm = false; editingGroup = null; }}
-    onsaved={loadItems}
+    onsaved={(savedName) => { void loadItems().then(() => flashUpdated(savedName)); }}
 />
+
+{#if updatedName}
+    <div class="toast">Saved</div>
+{/if}
 
 <style>
     .action-cell {
@@ -190,6 +206,28 @@
 
     .danger-text {
         color: var(--color-danger);
+    }
+
+    .toast {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        background: #2e7d32;
+        color: white;
+        padding: 0.5rem 1.25rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        animation: toast-in-out 3s forwards;
+        z-index: 1000;
+    }
+
+    @keyframes toast-in-out {
+        0% { opacity: 0; transform: translateY(8px); }
+        10% { opacity: 1; transform: translateY(0); }
+        75% { opacity: 1; }
+        100% { opacity: 0; }
     }
 
     .group-row {

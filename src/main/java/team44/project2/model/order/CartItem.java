@@ -20,19 +20,18 @@ public record CartItem(
         String size,
         String sweetness,
         String iceLevel,
-        List<MenuItem> addOns
+        List<MenuItem> addOns,
+        int quantity
 ) {
-    /**
-     * Computes the total price of this cart item as the sum of the base menu-item price
-     * and the prices of all selected add-ons.
-     *
-     * @return The computed grand total as a {@link java.math.BigDecimal}.
-     */
-    public BigDecimal totalPrice() {
+    public BigDecimal unitPrice() {
         BigDecimal total = item.basePrice();
         for (MenuItem addOn : addOns) {
             total = total.add(addOn.basePrice());
         }
         return total;
+    }
+
+    public BigDecimal totalPrice() {
+        return unitPrice().multiply(BigDecimal.valueOf(quantity));
     }
 }

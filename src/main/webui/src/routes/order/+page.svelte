@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { MenuItem, CartItem, Customer } from '$lib/types';
     import { onDestroy, onMount } from 'svelte';
-    import { SvelteSet } from 'svelte/reactivity';
+
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { getCategories, getItemsByCategory } from '$lib/api';
@@ -38,6 +38,8 @@
 
     let customizeItem = $state<MenuItem | null>(null);
     let showCustomize = $state(false);
+    let editingIndex = $state<number | null>(null);
+    let editingCartItem = $state<CartItem | null>(null);
     let showCheckIn = $state(false);
     let showPayment = $state(false);
     let showComplete = $state(false);
@@ -53,17 +55,21 @@
 
     const POINTS_PER_REDEEM = 10;
 
-    let redeemedIndices = $state(new SvelteSet<number>());
+    let redeemedCounts = $state(new Map<number, number>());
+
+    let totalRedeemed = $derived(
+        Array.from(redeemedCounts.values()).reduce((sum, n) => sum + n, 0)
+    );
 
     let maxRedeemable = $derived(
         customer ? Math.floor(customer.rewardPoints / POINTS_PER_REDEEM) : 0
     );
 
     let discount = $derived(
-        cart.reduce((sum, c, i) => sum + (redeemedIndices.has(i) ? c.item.basePrice : 0), 0)
+        cart.reduce((sum, c, i) => sum + (redeemedCounts.get(i) ?? 0) * c.item.basePrice, 0)
     );
 
-    let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
+    let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice * c.quantity, 0));
     let tax = $derived(Math.round((subtotal - discount) * TAX_RATE * 100) / 100);
 
     let idleSeconds = $state(0);
@@ -191,27 +197,83 @@
     }
 
     function addToCart(cartItem: CartItem) {
-        cart = [...cart, cartItem];
+        const existingIndex = cart.findIndex(c =>
+            c.item.menuItemId === cartItem.item.menuItemId &&
+            c.size === cartItem.size &&
+            c.sweetness === cartItem.sweetness &&
+            c.iceLevel === cartItem.iceLevel &&
+            c.addOns.length === cartItem.addOns.length &&
+            c.addOns.every(a => cartItem.addOns.some(b => b.menuItemId === a.menuItemId))
+        );
+        if (existingIndex >= 0) {
+            cart = cart.map((c, i) =>
+                i === existingIndex ? { ...c, quantity: c.quantity + 1 } : c
+            );
+        } else {
+            cart = [...cart, { ...cartItem, quantity: 1 }];
+        }
     }
 
     function removeFromCart(index: number) {
         cart = cart.filter((_, i) => i !== index);
-        const updated = new SvelteSet<number>();
-        for (const idx of redeemedIndices) {
-            if (idx < index) updated.add(idx);
-            else if (idx > index) updated.add(idx - 1);
+        const updated = new Map<number, number>();
+        for (const [idx, count] of redeemedCounts) {
+            if (idx < index) updated.set(idx, count);
+            else if (idx > index) updated.set(idx - 1, count);
         }
-        redeemedIndices = updated;
+        redeemedCounts = updated;
     }
 
-    function toggleRedeem(index: number) {
-        const next = new SvelteSet(redeemedIndices);
-        if (next.has(index)) {
-            next.delete(index);
-        } else if (next.size < maxRedeemable) {
-            next.add(index);
+    function incrementQuantity(index: number) {
+        cart = cart.map((c, i) =>
+            i === index ? { ...c, quantity: c.quantity + 1 } : c
+        );
+    }
+
+    function decrementQuantity(index: number) {
+        const item = cart[index];
+        if (item && item.quantity <= 1) {
+            removeFromCart(index);
+        } else {
+            cart = cart.map((c, i) =>
+                i === index ? { ...c, quantity: c.quantity - 1 } : c
+            );
         }
-        redeemedIndices = next;
+    }
+
+    function openEditItem(index: number) {
+        editingIndex = index;
+        editingCartItem = cart[index] ?? null;
+        customizeItem = cart[index]?.item ?? null;
+        showCustomize = true;
+    }
+
+    function saveEditedItem(updatedCartItem: CartItem) {
+        if (editingIndex !== null) {
+            cart = cart.map((c, i) =>
+                i === editingIndex ? updatedCartItem : c
+            );
+            editingIndex = null;
+            editingCartItem = null;
+        }
+    }
+
+    function redeemOne(index: number) {
+        const current = redeemedCounts.get(index) ?? 0;
+        if (totalRedeemed >= maxRedeemable) return;
+        if (current >= cart[index].quantity) return;
+        const next = new Map(redeemedCounts);
+        next.set(index, current + 1);
+        redeemedCounts = next;
+    }
+
+    function unredeemOne(index: number) {
+        const current = redeemedCounts.get(index) ?? 0;
+        if (current <= 0) return;
+        const next = new Map(redeemedCounts);
+        if (current === 1) next.delete(index);
+        else next.set(index, current - 1);
+        redeemedCounts = next;
     }
 
     function handleCustomerConfirm(c: Customer) {
@@ -238,7 +300,7 @@
     function startOver() {
         cart = [];
         customer = getCustomer();
-        redeemedIndices = new SvelteSet();
+        redeemedCounts = new Map();
         customizeItem = null;
         showCustomize = false;
         showCheckIn = false;
@@ -383,9 +445,9 @@
         <aside class="cart-panel">
             <h3 class="cart-title">Your Cart</h3>
 
-            {#if customer && maxRedeemable > 0 && maxRedeemable > redeemedIndices.size && cart.length > 0}
+            {#if customer && maxRedeemable > 0 && maxRedeemable > totalRedeemed && cart.length > 0}
                 <div class="free-drink-banner">
-                    You have {maxRedeemable - redeemedIndices.size} free drink{maxRedeemable - redeemedIndices.size > 1 ? 's' : ''}! Tap the <strong>Redeem</strong> button next to any item below.
+                    You have {maxRedeemable - totalRedeemed} free drink{maxRedeemable - totalRedeemed > 1 ? 's' : ''}! Tap the <strong>Redeem</strong> button next to any item below.
                 </div>
             {/if}
 
@@ -394,13 +456,13 @@
                     <p class="cart-empty">Your cart is empty. Browse the menu and add items!</p>
                 {:else}
                     {#each cart as cartItem, i (i)}
-                        <div class="cart-card" class:redeemed={redeemedIndices.has(i)}>
+                        {@const redeemed = redeemedCounts.get(i) ?? 0}
+                        <div class="cart-card" class:redeemed={redeemed > 0}>
                             <div class="cart-card-icon">
                                 {categoryEmojis[cartItem.item.category] ?? '\u{1F964}'}
                             </div>
                             <div class="cart-card-info">
-                                <span class="cart-card-name">{toTitleCase(cartItem.item.name)}</span
-                                >
+                                <span class="cart-card-name">{toTitleCase(cartItem.item.name)}</span>
                                 <span class="cart-card-details">
                                     {cartItem.size} &middot; {cartItem.sweetness} &middot; {cartItem.iceLevel}
                                 </span>
@@ -411,29 +473,41 @@
                                             .join(', ')}
                                     </span>
                                 {/if}
+                                <div class="cart-qty-row">
+                                    <button class="qty-btn" onclick={() => decrementQuantity(i)}>-</button>
+                                    <span class="qty-value">{cartItem.quantity}</span>
+                                    <button class="qty-btn" onclick={() => incrementQuantity(i)}>+</button>
+                                    <button class="cart-edit-btn" onclick={() => openEditItem(i)}>Edit</button>
+                                </div>
                                 <div class="cart-card-bottom">
-                                    {#if redeemedIndices.has(i)}
-                                        <span class="redeem-label">FREE (reward)</span>
+                                    {#if redeemed > 0}
+                                        <span class="redeem-label">{cartItem.quantity > 1 ? `${redeemed}x ` : ''}FREE (reward)</span>
                                         <span class="cart-card-price">
-                                            <span class="price-struck">{formatCurrency(cartItem.item.basePrice)}</span>
-                                            {formatCurrency(cartItem.totalPrice - cartItem.item.basePrice)}
+                                            <span class="price-struck">{formatCurrency(redeemed * cartItem.item.basePrice)}</span>
+                                            {formatCurrency(cartItem.totalPrice * cartItem.quantity - redeemed * cartItem.item.basePrice)}
                                         </span>
                                     {:else}
-                                        <span class="cart-card-price"
-                                            >{formatCurrency(cartItem.totalPrice)}</span
-                                        >
+                                        <span class="cart-card-price">
+                                            {formatCurrency(cartItem.totalPrice * cartItem.quantity)}
+                                        </span>
                                     {/if}
                                     {#if maxRedeemable > 0 && customer}
-                                        <button
-                                            class="redeem-toggle"
-                                            class:active={redeemedIndices.has(i)}
-                                            onclick={() => {
-                                                toggleRedeem(i);
-                                            }}
-                                            disabled={!redeemedIndices.has(i) && redeemedIndices.size >= maxRedeemable}
-                                        >
-                                            {redeemedIndices.has(i) ? 'Undo' : 'Redeem'}
-                                        </button>
+                                        {#if redeemed > 0}
+                                            <button
+                                                class="redeem-toggle active"
+                                                onclick={() => unredeemOne(i)}
+                                            >
+                                                Undo
+                                            </button>
+                                        {/if}
+                                        {#if redeemed < cartItem.quantity && totalRedeemed < maxRedeemable}
+                                            <button
+                                                class="redeem-toggle"
+                                                onclick={() => redeemOne(i)}
+                                            >
+                                                Redeem
+                                            </button>
+                                        {/if}
                                     {/if}
                                 </div>
                             </div>
@@ -449,10 +523,10 @@
             </div>
 
             <div class="cart-summary">
-                {#if redeemedIndices.size > 0}
+                {#if totalRedeemed > 0}
                     <div class="cart-discount-banner">
-                        {redeemedIndices.size} drink{redeemedIndices.size > 1 ? 's' : ''} redeemed
-                        ({redeemedIndices.size * POINTS_PER_REDEEM} pts)
+                        {totalRedeemed} drink{totalRedeemed > 1 ? 's' : ''} redeemed
+                        ({totalRedeemed * POINTS_PER_REDEEM} pts)
                     </div>
                 {/if}
                 <div class="summary-line">
@@ -565,10 +639,16 @@
 <ItemCustomization
     open={showCustomize}
     item={customizeItem}
+    {editingCartItem}
     highContrast={highContrast}
     magnifierOn={false}
-    onclose={() => (showCustomize = false)}
+    onclose={() => {
+        showCustomize = false;
+        editingIndex = null;
+        editingCartItem = null;
+    }}
     onadd={addToCart}
+    onsave={saveEditedItem}
 />
 
 <CustomerCheckIn
@@ -584,7 +664,7 @@
     open={showPayment}
     {cart}
     {customer}
-    {redeemedIndices}
+    {redeemedCounts}
     employeeId={null}
     highContrast={highContrast}
     magnifierOn={false}
@@ -988,6 +1068,59 @@
         font-size: 0.85rem;
         color: #d4712a;
         margin-top: 0.15rem;
+    }
+
+    .cart-qty-row {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 0.25rem;
+    }
+
+    .qty-btn {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 1px solid #d4712a;
+        background: white;
+        color: #d4712a;
+        font-size: 0.9rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        cursor: pointer;
+    }
+
+    .qty-btn:hover {
+        background: #d4712a;
+        color: white;
+    }
+
+    .qty-value {
+        font-weight: 700;
+        font-size: 0.85rem;
+        min-width: 1.2rem;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .cart-edit-btn {
+        margin-left: auto;
+        padding: 0.15rem 0.5rem;
+        border-radius: var(--radius, 8px);
+        border: 1px solid #d4712a;
+        background: transparent;
+        color: #d4712a;
+        font-size: 0.7rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .cart-edit-btn:hover {
+        background: #d4712a;
+        color: white;
     }
 
     .cart-remove {

@@ -120,10 +120,8 @@ public class OrderService {
                 .map(CartItem::totalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Calculate discount: base price of each redeemed item (add-ons still charged)
         BigDecimal redeemDiscount = BigDecimal.ZERO;
-        java.util.Set<Integer> redeemedSet = new java.util.HashSet<>(redeemedIndices);
-        for (int idx : redeemedSet) {
+        for (int idx : redeemedIndices) {
             if (idx >= 0 && idx < cart.size()) {
                 redeemDiscount = redeemDiscount.add(cart.get(idx).item().basePrice());
             }
@@ -141,16 +139,18 @@ public class OrderService {
 
                 for (CartItem cartItem : cart) {
                     int parentItemId = insertMainItem(conn, orderId, cartItem);
-                    decrementInventory(conn, cartItem.item().menuItemId());
-
+                    for (int q = 0; q < cartItem.quantity(); q++) {
+                        decrementInventory(conn, cartItem.item().menuItemId());
+                        for (MenuItem addOn : cartItem.addOns()) {
+                            decrementInventory(conn, addOn.menuItemId());
+                        }
+                    }
                     for (MenuItem addOn : cartItem.addOns()) {
                         insertAddOn(conn, orderId, parentItemId, addOn);
-                        decrementInventory(conn, addOn.menuItemId());
                     }
                 }
 
-                // Deduct points for redeemed items
-                int pointsToDeduct = redeemedSet.size() * POINTS_PER_REDEEM;
+                int pointsToDeduct = redeemedIndices.size() * POINTS_PER_REDEEM;
                 if (customerId != null && pointsToDeduct > 0) {
                     deductRewardPoints(conn, customerId, pointsToDeduct);
                 }
@@ -255,7 +255,7 @@ public class OrderService {
             stmt.setInt(1, orderId);
             stmt.setInt(2, cartItem.item().menuItemId());
             stmt.setNull(3, Types.INTEGER);
-            stmt.setInt(4, 1);
+            stmt.setInt(4, cartItem.quantity());
             stmt.setString(5, cartItem.iceLevel());
             stmt.setString(6, cartItem.sweetness());
             stmt.setBigDecimal(7, cartItem.item().basePrice());

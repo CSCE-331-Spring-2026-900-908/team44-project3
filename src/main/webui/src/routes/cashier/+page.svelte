@@ -21,6 +21,8 @@
 
     let customizeItem = $state<MenuItem | null>(null);
     let showCustomize = $state(false);
+    let editingIndex = $state<number | null>(null);
+    let editingCartItem = $state<CartItem | null>(null);
     let showCheckIn = $state(false);
     let showPayment = $state(false);
     let showComplete = $state(false);
@@ -32,17 +34,21 @@
 
     const POINTS_PER_REDEEM = 10;
 
-    let redeemedIndices = $state<Set<number>>(new Set());
+    let redeemedCounts = $state(new Map<number, number>());
+
+    let totalRedeemed = $derived(
+        Array.from(redeemedCounts.values()).reduce((sum, n) => sum + n, 0)
+    );
 
     let maxRedeemable = $derived(
         customer ? Math.floor(customer.rewardPoints / POINTS_PER_REDEEM) : 0
     );
 
     let discount = $derived(
-        cart.reduce((sum, c, i) => sum + (redeemedIndices.has(i) ? c.item.basePrice : 0), 0)
+        cart.reduce((sum, c, i) => sum + (redeemedCounts.get(i) ?? 0) * c.item.basePrice, 0)
     );
 
-    let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice, 0));
+    let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice * c.quantity, 0));
     let tax = $derived(Math.round((subtotal - discount) * TAX_RATE * 100) / 100);
 
     $effect(() => {
@@ -67,28 +73,83 @@
     }
 
     function addToCart(cartItem: CartItem) {
-        cart = [...cart, cartItem];
+        const existingIndex = cart.findIndex(c =>
+            c.item.menuItemId === cartItem.item.menuItemId &&
+            c.size === cartItem.size &&
+            c.sweetness === cartItem.sweetness &&
+            c.iceLevel === cartItem.iceLevel &&
+            c.addOns.length === cartItem.addOns.length &&
+            c.addOns.every(a => cartItem.addOns.some(b => b.menuItemId === a.menuItemId))
+        );
+        if (existingIndex >= 0) {
+            cart = cart.map((c, i) =>
+                i === existingIndex ? { ...c, quantity: c.quantity + 1 } : c
+            );
+        } else {
+            cart = [...cart, { ...cartItem, quantity: 1 }];
+        }
     }
 
     function removeFromCart(index: number) {
         cart = cart.filter((_, i) => i !== index);
-        // Rebuild redeemed indices after removal
-        const updated = new Set<number>();
-        for (const idx of redeemedIndices) {
-            if (idx < index) updated.add(idx);
-            else if (idx > index) updated.add(idx - 1);
+        const updated = new Map<number, number>();
+        for (const [idx, count] of redeemedCounts) {
+            if (idx < index) updated.set(idx, count);
+            else if (idx > index) updated.set(idx - 1, count);
         }
-        redeemedIndices = updated;
+        redeemedCounts = updated;
     }
 
-    function toggleRedeem(index: number) {
-        const next = new Set(redeemedIndices);
-        if (next.has(index)) {
-            next.delete(index);
-        } else if (next.size < maxRedeemable) {
-            next.add(index);
+    function incrementQuantity(index: number) {
+        cart = cart.map((c, i) =>
+            i === index ? { ...c, quantity: c.quantity + 1 } : c
+        );
+    }
+
+    function decrementQuantity(index: number) {
+        const item = cart[index];
+        if (item && item.quantity <= 1) {
+            removeFromCart(index);
+        } else {
+            cart = cart.map((c, i) =>
+                i === index ? { ...c, quantity: c.quantity - 1 } : c
+            );
         }
-        redeemedIndices = next;
+    }
+
+    function openEditItem(index: number) {
+        editingIndex = index;
+        editingCartItem = cart[index] ?? null;
+        customizeItem = cart[index]?.item ?? null;
+        showCustomize = true;
+    }
+
+    function saveEditedItem(updatedCartItem: CartItem) {
+        if (editingIndex !== null) {
+            cart = cart.map((c, i) =>
+                i === editingIndex ? updatedCartItem : c
+            );
+            editingIndex = null;
+            editingCartItem = null;
+        }
+    }
+
+    function redeemOne(index: number) {
+        const current = redeemedCounts.get(index) ?? 0;
+        if (totalRedeemed >= maxRedeemable) return;
+        if (current >= cart[index].quantity) return;
+        const next = new Map(redeemedCounts);
+        next.set(index, current + 1);
+        redeemedCounts = next;
+    }
+
+    function unredeemOne(index: number) {
+        const current = redeemedCounts.get(index) ?? 0;
+        if (current <= 0) return;
+        const next = new Map(redeemedCounts);
+        if (current === 1) next.delete(index);
+        else next.set(index, current - 1);
+        redeemedCounts = next;
     }
 
     function handleCustomerConfirm(c: Customer) {
@@ -108,7 +169,7 @@
     function newSale() {
         cart = [];
         customer = null;
-        redeemedIndices = new Set();
+        redeemedCounts = new Map();
         showComplete = false;
     }
 
@@ -173,9 +234,9 @@
                 {/if}
             </div>
 
-            {#if customer && maxRedeemable > 0 && maxRedeemable > redeemedIndices.size}
+            {#if customer && maxRedeemable > 0 && maxRedeemable > totalRedeemed}
                 <div class="free-drink-hint">
-                    {maxRedeemable - redeemedIndices.size} free drink{maxRedeemable - redeemedIndices.size > 1 ? 's' : ''} available
+                    {maxRedeemable - totalRedeemed} free drink{maxRedeemable - totalRedeemed > 1 ? 's' : ''} available
                 </div>
             {/if}
 
@@ -184,7 +245,8 @@
                     <p class="empty-cart">No items yet</p>
                 {:else}
                     {#each cart as cartItem, i (i)}
-                        <div class="cart-row" class:redeemed={redeemedIndices.has(i)}>
+                        {@const redeemed = redeemedCounts.get(i) ?? 0}
+                        <div class="cart-row" class:redeemed={redeemed > 0}>
                             <div class="cart-item-info">
                                 <span class="cart-item-name">{toTitleCase(cartItem.item.name)}</span>
                                 <span class="cart-item-details">
@@ -196,26 +258,41 @@
                                         + {cartItem.addOns.map((a) => toTitleCase(a.name)).join(', ')}
                                     </span>
                                 {/if}
+                                <div class="cart-qty-row">
+                                    <button class="qty-btn" onclick={() => decrementQuantity(i)}>-</button>
+                                    <span class="qty-value">{cartItem.quantity}</span>
+                                    <button class="qty-btn" onclick={() => incrementQuantity(i)}>+</button>
+                                    <button class="cart-edit-btn" onclick={() => openEditItem(i)}>Edit</button>
+                                </div>
                                 <div class="cart-item-bottom">
-                                    {#if redeemedIndices.has(i)}
-                                        <span class="redeem-label">FREE (reward)</span>
+                                    {#if redeemed > 0}
+                                        <span class="redeem-label">{cartItem.quantity > 1 ? `${redeemed}x ` : ''}FREE (reward)</span>
                                         <span class="cart-item-price-row">
-                                            <span class="price-struck">{formatCurrency(cartItem.item.basePrice)}</span>
-                                            <span class="price-free">{formatCurrency(cartItem.totalPrice - cartItem.item.basePrice)}</span>
+                                            <span class="price-struck">{formatCurrency(redeemed * cartItem.item.basePrice)}</span>
+                                            <span class="price-free">{formatCurrency(cartItem.totalPrice * cartItem.quantity - redeemed * cartItem.item.basePrice)}</span>
                                         </span>
                                     {:else}
-                                        <span class="cart-item-price">{formatCurrency(cartItem.totalPrice)}</span>
+                                        <span class="cart-item-price">{formatCurrency(cartItem.totalPrice * cartItem.quantity)}</span>
                                     {/if}
                                     {#if maxRedeemable > 0 && customer}
-                                        <button
-                                            class="btn-ghost redeem-toggle"
-                                            class:active={redeemedIndices.has(i)}
-                                            onclick={() => toggleRedeem(i)}
-                                            disabled={!redeemedIndices.has(i) && redeemedIndices.size >= maxRedeemable}
-                                            title={redeemedIndices.has(i) ? 'Undo redeem' : 'Redeem free drink'}
-                                        >
-                                            {redeemedIndices.has(i) ? 'Undo' : 'Redeem'}
-                                        </button>
+                                        {#if redeemed > 0}
+                                            <button
+                                                class="btn-ghost redeem-toggle active"
+                                                onclick={() => unredeemOne(i)}
+                                                title="Undo redeem"
+                                            >
+                                                Undo
+                                            </button>
+                                        {/if}
+                                        {#if redeemed < cartItem.quantity && totalRedeemed < maxRedeemable}
+                                            <button
+                                                class="btn-ghost redeem-toggle"
+                                                onclick={() => redeemOne(i)}
+                                                title="Redeem free drink"
+                                            >
+                                                Redeem
+                                            </button>
+                                        {/if}
                                     {/if}
                                 </div>
                             </div>
@@ -230,10 +307,10 @@
             </div>
 
             <div class="cart-footer">
-                {#if redeemedIndices.size > 0}
+                {#if totalRedeemed > 0}
                     <div class="cart-discount-banner">
-                        {redeemedIndices.size} drink{redeemedIndices.size > 1 ? 's' : ''} redeemed
-                        ({redeemedIndices.size * POINTS_PER_REDEEM} pts)
+                        {totalRedeemed} drink{totalRedeemed > 1 ? 's' : ''} redeemed
+                        ({totalRedeemed * POINTS_PER_REDEEM} pts)
                     </div>
                 {/if}
                 <div class="cart-total">
@@ -269,8 +346,14 @@
 <ItemCustomization
     open={showCustomize}
     item={customizeItem}
-    onclose={() => (showCustomize = false)}
+    {editingCartItem}
+    onclose={() => {
+        showCustomize = false;
+        editingIndex = null;
+        editingCartItem = null;
+    }}
     onadd={addToCart}
+    onsave={saveEditedItem}
 />
 
 <CustomerCheckIn
@@ -284,7 +367,7 @@
     open={showPayment}
     {cart}
     {customer}
-    {redeemedIndices}
+    {redeemedCounts}
     onclose={() => (showPayment = false)}
     oncomplete={handlePaymentComplete}
 />
@@ -469,6 +552,57 @@
         display: block;
         font-size: 0.75rem;
         color: var(--color-text-muted);
+    }
+
+    .cart-qty-row {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 0.25rem;
+    }
+
+    .qty-btn {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 1px solid var(--color-primary);
+        background: white;
+        color: var(--color-primary);
+        font-size: 0.9rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    .qty-btn:hover {
+        background: var(--color-primary);
+        color: white;
+    }
+
+    .qty-value {
+        font-weight: 700;
+        font-size: 0.85rem;
+        min-width: 1.2rem;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .cart-edit-btn {
+        margin-left: auto;
+        padding: 0.15rem 0.5rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--color-primary);
+        background: transparent;
+        color: var(--color-primary);
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .cart-edit-btn:hover {
+        background: var(--color-primary);
+        color: white;
     }
 
     .cart-item-actions {

@@ -52,6 +52,7 @@ export interface CartItem {
     iceLevel: string;
     addOns: MenuItem[];
     totalPrice: number;
+    quantity: number;
 }
 
 export interface Order {

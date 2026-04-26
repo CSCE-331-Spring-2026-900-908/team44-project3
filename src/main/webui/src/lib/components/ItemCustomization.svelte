@@ -7,17 +7,21 @@
     let {
         open,
         item,
+        editingCartItem = null,
         highContrast = false,
         magnifierOn = false,
         onclose,
-        onadd
+        onadd,
+        onsave
     }: {
         open: boolean;
         item: MenuItem | null;
+        editingCartItem?: CartItem | null;
         highContrast?: boolean;
         magnifierOn?: boolean;
         onclose: () => void;
         onadd: (cartItem: CartItem) => void;
+        onsave?: (cartItem: CartItem) => void;
     } = $props();
 
     const sizes = ['Small', 'Medium', 'Large'];
@@ -39,10 +43,17 @@
 
     $effect(() => {
         if (open) {
-            selectedSize = item?.size ?? 'Medium';
-            selectedSweetness = '100%';
-            selectedIce = item?.isHot ? 'Hot' : 'Regular Ice';
-            selectedAddOns = [];
+            if (editingCartItem) {
+                selectedSize = editingCartItem.size;
+                selectedSweetness = editingCartItem.sweetness as SweetnessLevel;
+                selectedIce = editingCartItem.iceLevel as IceLevel;
+                selectedAddOns = [...editingCartItem.addOns];
+            } else {
+                selectedSize = item?.size ?? 'Medium';
+                selectedSweetness = '100%';
+                selectedIce = item?.isHot ? 'Hot' : 'Regular Ice';
+                selectedAddOns = [];
+            }
             void loadAddOns();
         }
     });
@@ -72,14 +83,20 @@
 
     function addToCart() {
         if (!item) return;
-        onadd({
+        const cartItem: CartItem = {
             item,
             size: selectedSize,
             sweetness: selectedSweetness,
             iceLevel: selectedIce,
             addOns: selectedAddOns,
-            totalPrice: totalPrice()
-        });
+            totalPrice: totalPrice(),
+            quantity: editingCartItem?.quantity ?? 1
+        };
+        if (editingCartItem && onsave) {
+            onsave(cartItem);
+        } else {
+            onadd(cartItem);
+        }
         onclose();
     }
 </script>
@@ -161,7 +178,7 @@
 
         <div class="footer">
             <span class="total">Total: ${totalPrice().toFixed(2)}</span>
-            <button class="btn-primary btn-lg" onclick={addToCart}>Add to Cart</button>
+            <button class="btn-primary btn-lg" onclick={addToCart}>{editingCartItem ? 'Save Changes' : 'Add to Cart'}</button>
         </div>
     </div>
 </Modal>

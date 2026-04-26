@@ -403,6 +403,8 @@
     tip={completedTip}
     total={completedTotal}
     pointsEarned={completedPointsEarned}
+    customerEmail={customer?.email ?? ''}
+    cart={cart}
     onnewsale={newSale}
     onclose={() => (showComplete = false)}
 />

@@ -5,11 +5,13 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import team44.project2.model.order.CartItem;
 import team44.project2.model.order.Order;
+import team44.project2.service.EmailService;
 import team44.project2.service.OrderService;
 
 import java.math.BigDecimal;
@@ -24,6 +26,9 @@ public class OrderResource {
     @Inject
     OrderService orderService;
 
+    @Inject
+    EmailService emailService;
+
     public record OrderRequest(
             Integer employeeId,
             Integer customerId,
@@ -31,6 +36,15 @@ public class OrderResource {
             BigDecimal tipAmount,
             List<CartItem> cart,
             List<Integer> redeemedIndices
+    ) {}
+
+    public record EmailReceiptRequest(
+            String email,
+            BigDecimal subtotal,
+            BigDecimal tip,
+            BigDecimal total,
+            int pointsEarned,
+            List<EmailService.ReceiptItem> items
     ) {}
 
     @POST
@@ -44,5 +58,27 @@ public class OrderResource {
             return Response.serverError().build();
         }
         return Response.status(Response.Status.CREATED).entity(order).build();
+    }
+
+    @POST
+    @Path("/{orderId}/email-receipt")
+    public Response emailReceipt(@PathParam("orderId") int orderId, EmailReceiptRequest req) {
+        if (req.email() == null || req.email().isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Email address is required\"}")
+                    .build();
+        }
+        boolean sent = emailService.sendReceipt(
+                req.email(), orderId,
+                req.subtotal(), req.tip(), req.total(),
+                req.pointsEarned(),
+                req.items() != null ? req.items() : List.of()
+        );
+        if (!sent) {
+            return Response.serverError()
+                    .entity("{\"error\":\"Failed to send email\"}")
+                    .build();
+        }
+        return Response.ok("{\"sent\":true}").build();
     }
 }

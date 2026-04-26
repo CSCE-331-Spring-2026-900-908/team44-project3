@@ -2,6 +2,7 @@
     import { onDestroy } from 'svelte';
     import { formatCurrency } from '$lib/utils';
     import Modal from './Modal.svelte';
+    import type { CartItem } from '$lib/types';
 
     let {
         open,
@@ -9,6 +10,8 @@
         tip,
         total,
         pointsEarned = 0,
+        customerEmail = '',
+        cart = [],
         highContrast = false,
         magnifierOn = false,
         onnewsale,
@@ -19,6 +22,8 @@
         tip: number;
         total: number;
         pointsEarned?: number;
+        customerEmail?: string;
+        cart?: CartItem[];
         highContrast?: boolean;
         magnifierOn?: boolean;
         onnewsale: () => void;
@@ -26,14 +31,21 @@
     } = $props();
 
     type ReceiptStatus = 'idle' | 'printed' | 'emailed';
+    type EmailStep = 'none' | 'entering' | 'sending' | 'sent' | 'error';
 
     let receiptStatus = $state<ReceiptStatus>('idle');
+    let emailStep = $state<EmailStep>('none');
+    let emailInput = $state('');
+    let emailError = $state('');
     let countdown = $state(10);
     let dismissTimer: ReturnType<typeof setInterval> | null = null;
 
     $effect(() => {
         if (open) {
             receiptStatus = 'idle';
+            emailStep = 'none';
+            emailInput = customerEmail ?? '';
+            emailError = '';
             startCountdown();
         } else {
             clearCountdown();
@@ -68,8 +80,56 @@
         startCountdown();
     }
 
-    function handleEmail() {
-        receiptStatus = 'emailed';
+    function handleEmailClick() {
+        clearCountdown();
+        emailStep = 'entering';
+        emailInput = customerEmail ?? '';
+        emailError = '';
+    }
+
+    async function submitEmail() {
+        const addr = emailInput.trim();
+        if (!addr || !addr.includes('@')) {
+            emailError = 'Please enter a valid email address.';
+            return;
+        }
+        emailStep = 'sending';
+        emailError = '';
+
+        const subtotal = total - tip;
+        const items = cart.map(c => ({
+            name: c.item.name,
+            size: c.size ?? '',
+            sweetness: c.sweetness ?? '',
+            iceLevel: c.iceLevel ?? '',
+            addOns: c.addOns.map(a => a.name),
+            quantity: c.quantity,
+            unitPrice: c.item.basePrice
+        }));
+
+        try {
+            const res = await fetch(`/api/orders/${orderId}/email-receipt`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: addr, subtotal, tip, total, pointsEarned, items })
+            });
+            if (res.ok) {
+                emailStep = 'sent';
+                receiptStatus = 'emailed';
+                startCountdown();
+            } else {
+                emailStep = 'error';
+                emailError = 'Failed to send email. Please try again.';
+            }
+        } catch {
+            emailStep = 'error';
+            emailError = 'Network error. Please try again.';
+        }
+    }
+
+    function cancelEmail() {
+        emailStep = 'none';
+        emailError = '';
         startCountdown();
     }
 
@@ -112,14 +172,37 @@
             {/if}
         </div>
 
-        {#if receiptStatus === 'idle'}
+        {#if receiptStatus === 'idle' && emailStep === 'none'}
             <p class="receipt-label">Would you like a receipt?</p>
             <div class="receipt-options">
                 <button class="btn-secondary" onclick={handlePrint}>Print Receipt</button>
-                <button class="btn-secondary" onclick={handleEmail}>Email Receipt</button>
+                <button class="btn-secondary" onclick={handleEmailClick}>Email Receipt</button>
                 <button class="btn-ghost" onclick={handleNoReceipt}>No Receipt</button>
             </div>
             <p class="countdown-text">Closing in {countdown}s...</p>
+
+        {:else if emailStep === 'entering' || emailStep === 'error'}
+            <p class="receipt-label">Enter email address:</p>
+            <div class="email-form">
+                <input
+                    class="email-input"
+                    type="email"
+                    placeholder="you@example.com"
+                    bind:value={emailInput}
+                    onkeydown={(e) => e.key === 'Enter' && submitEmail()}
+                />
+                {#if emailError}
+                    <p class="email-error">{emailError}</p>
+                {/if}
+                <div class="email-actions">
+                    <button class="btn-primary" onclick={submitEmail}>Send Receipt</button>
+                    <button class="btn-ghost" onclick={cancelEmail}>Cancel</button>
+                </div>
+            </div>
+
+        {:else if emailStep === 'sending'}
+            <p class="receipt-label">Sending receipt...</p>
+
         {:else}
             <div class="receipt-confirmed">
                 <span class="receipt-badge">
@@ -196,6 +279,41 @@
     .receipt-options {
         display: flex;
         gap: 0.5rem;
+    }
+
+    .email-form {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .email-input {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+    }
+
+    .email-input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 2px rgba(139, 94, 60, 0.15);
+    }
+
+    .email-error {
+        font-size: 0.8rem;
+        color: var(--color-error, #e53935);
+        margin: 0;
+    }
+
+    .email-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
     }
 
     .countdown-text {
@@ -287,6 +405,16 @@
         color: #000;
     }
 
+    .complete-content.high-contrast .email-input {
+        background: #000;
+        color: #fff;
+        border: 2px solid #fff;
+    }
+
+    .complete-content.high-contrast .email-error {
+        color: #ff6b6b;
+    }
+
     /* magnifier */
 
     .complete-content.magnifier-on {
@@ -328,5 +456,10 @@
     .complete-content.magnifier-on .btn-lg {
         font-size: 1rem;
         padding: 0.85rem 1.25rem;
+    }
+
+    .complete-content.magnifier-on .email-input {
+        font-size: 1rem;
+        padding: 0.75rem;
     }
 </style>

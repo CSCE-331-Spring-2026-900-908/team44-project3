@@ -10,7 +10,9 @@
             const grouped: Record<string, any[]> = {};
             for (const item of items) {
                 if (!grouped[item.category]) grouped[item.category] = [];
-                grouped[item.category].push(item);
+                if (!grouped[item.category].some((i: any) => i.name === item.name)) {
+                    grouped[item.category].push(item);
+                }
             }
             itemsByCategory = grouped;
         } catch (e) {
@@ -48,7 +50,7 @@
 </script>
 
 <div class="screen">
-    <h1 class="board-title">🍽️Our Menu📜</h1>
+    <h1 class="board-title">Our Menu</h1>
 
     {#if Object.keys(itemsByCategory).length === 0}
         <p class="empty">Menu unavailable.</p>
@@ -67,7 +69,7 @@
                                 <div class="img-wrap placeholder">🧋</div>
                             {/if}
                             <div class="card-body">
-                                <div class="item-name">{item.name}{item.size ? ` (${item.size})` : ''}</div>
+                                <div class="item-name">{item.name}</div>
                                 <div class="item-price">${Number(item.basePrice).toFixed(2)}</div>
                             </div>
                         </div>
@@ -150,6 +152,7 @@ section {
     margin-bottom: 0.3rem;
     color: #222;
     line-height: 1.3;
+    text-transform: capitalize;
 }
 .item-price {
     font-size: 1rem;

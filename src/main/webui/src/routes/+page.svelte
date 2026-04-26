@@ -2,6 +2,7 @@
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { restoreCustomer } from '$lib/stores/auth.svelte';
+    import LanguageSelector from '$lib/components/LanguageSelector.svelte';
 
     $effect(() => {
         if (restoreCustomer()) void goto(resolve('/customer'));
@@ -9,6 +10,9 @@
 </script>
 
 <div class="portal">
+    <div class="portal-lang">
+        <LanguageSelector />
+    </div>
     <header class="portal-header">
         <img src="/boba.png" alt="" class="logo" />
         <h1>Team 44 Boba</h1>
@@ -86,6 +90,13 @@
 </div>
 
 <style>
+    .portal-lang {
+        position: absolute;
+        top: 1rem;
+        right: 1.5rem;
+        z-index: 50;
+    }
+
     .portal {
         min-height: 100vh;
         display: flex;

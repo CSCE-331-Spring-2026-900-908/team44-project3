@@ -13,15 +13,14 @@
     import TransactionComplete from '$lib/components/TransactionComplete.svelte';
     import LanguageSelector from '$lib/components/LanguageSelector.svelte';
 
-    function formatAddOns(addOns: MenuItem[]): string {
-        const counts = new Map<string, number>();
+    function groupAddOns(addOns: MenuItem[]): [string, number, number][] {
+        const map = new Map<number, { name: string; qty: number; price: number }>();
         for (const a of addOns) {
-            const name = toTitleCase(a.name);
-            counts.set(name, (counts.get(name) ?? 0) + 1);
+            const existing = map.get(a.menuItemId);
+            if (existing) existing.qty++;
+            else map.set(a.menuItemId, { name: toTitleCase(a.name), qty: 1, price: a.basePrice });
         }
-        return Array.from(counts.entries())
-            .map(([name, qty]) => qty > 1 ? `${qty}x ${name}` : name)
-            .join(', ');
+        return Array.from(map.values()).map(e => [e.name, e.qty, e.price]);
     }
 
     let categories = $state<string[]>([]);
@@ -30,6 +29,7 @@
     let customer = $state<Customer | null>(null);
 
     let customizeItem = $state<MenuItem | null>(null);
+    let customizeVariants = $state<MenuItem[]>([]);
     let showCustomize = $state(false);
     let editingIndex = $state<number | null>(null);
     let editingCartItem = $state<CartItem | null>(null);
@@ -77,8 +77,9 @@
         }
     }
 
-    function openCustomization(item: MenuItem) {
-        customizeItem = item;
+    function openCustomization(variants: MenuItem[]) {
+        customizeVariants = variants;
+        customizeItem = variants[0] ?? null;
         showCustomize = true;
     }
 
@@ -136,7 +137,9 @@
     function openEditItem(index: number) {
         editingIndex = index;
         editingCartItem = cart[index] ?? null;
-        customizeItem = cart[index]?.item ?? null;
+        const cartMenuItem = cart[index]?.item;
+        customizeItem = cartMenuItem ?? null;
+        customizeVariants = cartMenuItem ? [cartMenuItem] : [];
         showCustomize = true;
     }
 
@@ -265,14 +268,19 @@
                         <div class="cart-row" class:redeemed={redeemed > 0}>
                             <div class="cart-item-info">
                                 <span class="cart-item-name">{toTitleCase(cartItem.item.name)}</span>
-                                <span class="cart-item-details">
-                                    {cartItem.size} &middot; {cartItem.sweetness} &middot;
-                                    {cartItem.iceLevel}
-                                </span>
+                                <span class="cart-item-details">Size: {toTitleCase(cartItem.size)}</span>
+                                <span class="cart-item-details">Sweetness: {cartItem.sweetness}</span>
+                                <span class="cart-item-details">{cartItem.iceLevel}</span>
                                 {#if cartItem.addOns.length > 0}
-                                    <span class="cart-item-details">
-                                        + {formatAddOns(cartItem.addOns)}
-                                    </span>
+                                    <div class="cart-addons">
+                                        <span class="cart-addons-label">Add-ons:</span>
+                                        {#each groupAddOns(cartItem.addOns) as [name, qty, price]}
+                                            <span class="cart-addon-item">
+                                                {qty > 1 ? `${qty}x ` : ''}{name}
+                                                <span class="cart-addon-price">{formatCurrency(price * qty)}</span>
+                                            </span>
+                                        {/each}
+                                    </div>
                                 {/if}
                                 <div class="cart-qty-row">
                                     <button class="qty-btn" onclick={() => decrementQuantity(i)}><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="6" x2="10" y2="6" /></svg></button>
@@ -362,6 +370,7 @@
 <ItemCustomization
     open={showCustomize}
     item={customizeItem}
+    variants={customizeVariants}
     {editingCartItem}
     onclose={() => {
         showCustomize = false;
@@ -686,6 +695,37 @@
         align-items: center;
         gap: 0.5rem;
         margin-top: 0.25rem;
+    }
+
+    .cart-addons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        margin-top: 0.15rem;
+        padding-left: 0.25rem;
+    }
+
+    .cart-addons-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .cart-addon-item {
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        padding-left: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .cart-addon-price {
+        color: var(--color-text-muted);
+        opacity: 0.7;
+        margin-left: 0.5rem;
+        flex-shrink: 0;
     }
 
     .cart-item-price {

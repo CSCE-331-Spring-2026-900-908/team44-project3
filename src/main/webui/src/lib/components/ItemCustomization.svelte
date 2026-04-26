@@ -7,6 +7,7 @@
     let {
         open,
         item,
+        variants = [],
         editingCartItem = null,
         highContrast = false,
         magnifierOn = false,
@@ -16,6 +17,7 @@
     }: {
         open: boolean;
         item: MenuItem | null;
+        variants?: MenuItem[];
         editingCartItem?: CartItem | null;
         highContrast?: boolean;
         magnifierOn?: boolean;
@@ -24,7 +26,16 @@
         onsave?: (cartItem: CartItem) => void;
     } = $props();
 
-    const sizes = ['Small', 'Medium', 'Large'];
+    let availableSizes = $derived(
+        variants.length > 0
+            ? [...new Set(variants.map(v => v.size))]
+            : item ? [item.size] : ['Medium']
+    );
+
+    let selectedVariant = $derived(
+        variants.find(v => v.size === selectedSize) ?? item
+    );
+
     const sweetnessLevels: SweetnessLevel[] = ['0%', '25%', '50%', '75%', '100%'];
     const iceLevels: IceLevel[] = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
 
@@ -74,9 +85,13 @@
         return addOnQtys.get(id) ?? 0;
     }
 
+    const MAX_ADDON_QTY = 5;
+
     function incrementAddOn(addon: MenuItem) {
+        const current = addOnQtys.get(addon.menuItemId) ?? 0;
+        if (current >= MAX_ADDON_QTY) return;
         const next = new Map(addOnQtys);
-        next.set(addon.menuItemId, (next.get(addon.menuItemId) ?? 0) + 1);
+        next.set(addon.menuItemId, current + 1);
         addOnQtys = next;
     }
 
@@ -99,19 +114,19 @@
     }
 
     function totalPrice(): number {
-        if (!item) return 0;
+        if (!selectedVariant) return 0;
         let addOnTotal = 0;
         for (const [id, qty] of addOnQtys) {
             const addon = availableAddOns.find(a => a.menuItemId === id);
             if (addon) addOnTotal += addon.basePrice * qty;
         }
-        return item.basePrice + addOnTotal;
+        return selectedVariant.basePrice + addOnTotal;
     }
 
     function addToCart() {
-        if (!item) return;
+        if (!selectedVariant) return;
         const cartItem: CartItem = {
-            item,
+            item: selectedVariant,
             size: selectedSize,
             sweetness: selectedSweetness,
             iceLevel: selectedIce,
@@ -128,18 +143,18 @@
     }
 </script>
 
-<Modal {open} title={item ? toTitleCase(item.name) : 'Customize'} {onclose} wide highContrast={highContrast} magnifierOn={magnifierOn}>
+<Modal {open} title={selectedVariant ? toTitleCase(selectedVariant.name) : 'Customize'} {onclose} wide highContrast={highContrast} magnifierOn={magnifierOn}>
     <div class="customize-form" class:high-contrast={highContrast} class:magnifier-on={magnifierOn}>
         <section>
             <h4>Size</h4>
             <div class="option-row">
-                {#each sizes as size (size)}
+                {#each availableSizes as size (size)}
                     <button
                         class="option-btn"
                         class:selected={selectedSize === size}
                         onclick={() => (selectedSize = size)}
                     >
-                        {size}
+                        {toTitleCase(size)}
                     </button>
                 {/each}
             </div>
@@ -161,8 +176,8 @@
         </section>
 
         <section>
-            <h4>{item?.isHot ? 'Temperature' : 'Ice Level'}</h4>
-            {#if item?.isHot}
+            <h4>{selectedVariant?.isHot ? 'Temperature' : 'Ice Level'}</h4>
+            {#if selectedVariant?.isHot}
                 <div class="option-row">
                     <button class="option-btn ice-btn hot selected">
                         Hot
@@ -198,7 +213,7 @@
                                     <button class="addon-btn" onclick={() => decrementAddOn(addon)}><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="6" x2="10" y2="6" /></svg></button>
                                     <span class="addon-qty">{qty}</span>
                                 {/if}
-                                <button class="addon-btn add" onclick={() => incrementAddOn(addon)}><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="2" x2="6" y2="10" /><line x1="2" y1="6" x2="10" y2="6" /></svg></button>
+                                <button class="addon-btn add" onclick={() => incrementAddOn(addon)} disabled={qty >= MAX_ADDON_QTY}><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="2" x2="6" y2="10" /><line x1="2" y1="6" x2="10" y2="6" /></svg></button>
                             </div>
                         </div>
                     {/each}
@@ -292,9 +307,16 @@
         padding: 0;
     }
 
-    .addon-btn:hover {
+    .addon-btn:hover:not(:disabled) {
         background: var(--color-primary);
         color: white;
+    }
+
+    .addon-btn:disabled {
+        border-color: #ddd;
+        color: #ccc;
+        cursor: not-allowed;
+        opacity: 0.4;
     }
 
     .addon-qty {

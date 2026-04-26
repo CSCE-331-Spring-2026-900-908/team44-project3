@@ -1,18 +1,28 @@
 <script lang="ts">
     import type { MenuItem } from '$lib/types';
     import { getItemsByCategory } from '$lib/api';
-    import { toTitleCase } from '$lib/utils';
+    import { toTitleCase, formatCurrency } from '$lib/utils';
 
     let {
         category,
         onselect
     }: {
         category: string;
-        onselect: (item: MenuItem) => void;
+        onselect: (variants: MenuItem[]) => void;
     } = $props();
 
     let items = $state<MenuItem[]>([]);
     let loading = $state(false);
+
+    let itemGroups = $derived((() => {
+        const groups = new Map<string, MenuItem[]>();
+        for (const item of items) {
+            const existing = groups.get(item.name);
+            if (existing) existing.push(item);
+            else groups.set(item.name, [item]);
+        }
+        return Array.from(groups.values());
+    })());
 
     $effect(() => {
         if (category) void loadItems();
@@ -39,16 +49,20 @@
         <p class="muted">No items in this category.</p>
     {:else}
         <div class="item-grid">
-            {#each items as item (item.menuItemId)}
+            {#each itemGroups as variants (variants[0].name)}
+                {@const anyAvailable = variants.some(v => v.isAvailable)}
+                {@const minPrice = Math.min(...variants.map(v => v.basePrice))}
                 <button
                     class="item-card"
-                    class:unavailable={!item.isAvailable}
-                    onclick={() => { onselect(item); }}
-                    disabled={!item.isAvailable}
+                    class:unavailable={!anyAvailable}
+                    onclick={() => { onselect(variants); }}
+                    disabled={!anyAvailable}
                 >
-                    <span class="item-name">{toTitleCase(item.name)}</span>
-                    <span class="item-price">${item.basePrice.toFixed(2)}</span>
-                    {#if !item.isAvailable}
+                    <span class="item-name">{toTitleCase(variants[0].name)}</span>
+                    <span class="item-price">
+                        {#if variants.length > 1}from&nbsp;{/if}{formatCurrency(minPrice)}
+                    </span>
+                    {#if !anyAvailable}
                         <span class="badge badge-danger">Sold Out</span>
                     {/if}
                 </button>

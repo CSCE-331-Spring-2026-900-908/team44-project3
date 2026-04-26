@@ -26,15 +26,14 @@
         topping: '\u{1F369}'
     };
 
-    function formatAddOns(addOns: MenuItem[]): string {
-        const counts = new Map<string, number>();
+    function groupAddOns(addOns: MenuItem[]): [string, number, number][] {
+        const map = new Map<number, { name: string; qty: number; price: number }>();
         for (const a of addOns) {
-            const name = toTitleCase(a.name);
-            counts.set(name, (counts.get(name) ?? 0) + 1);
+            const existing = map.get(a.menuItemId);
+            if (existing) existing.qty++;
+            else map.set(a.menuItemId, { name: toTitleCase(a.name), qty: 1, price: a.basePrice });
         }
-        return Array.from(counts.entries())
-            .map(([name, qty]) => qty > 1 ? `${qty}x ${name}` : name)
-            .join(', ');
+        return Array.from(map.values()).map(e => [e.name, e.qty, e.price]);
     }
 
     const IDLE_TIMEOUT = 30;
@@ -48,6 +47,7 @@
     let customer = $state(getCustomer());
 
     let customizeItem = $state<MenuItem | null>(null);
+    let customizeVariants = $state<MenuItem[]>([]);
     let showCustomize = $state(false);
     let editingIndex = $state<number | null>(null);
     let editingCartItem = $state<CartItem | null>(null);
@@ -79,6 +79,16 @@
     let discount = $derived(
         cart.reduce((sum, c, i) => sum + (redeemedCounts.get(i) ?? 0) * c.item.basePrice, 0)
     );
+
+    let itemGroups = $derived((() => {
+        const groups = new Map<string, MenuItem[]>();
+        for (const item of items) {
+            const existing = groups.get(item.name);
+            if (existing) existing.push(item);
+            else groups.set(item.name, [item]);
+        }
+        return Array.from(groups.values());
+    })());
 
     let subtotal = $derived(cart.reduce((sum, c) => sum + c.totalPrice * c.quantity, 0));
     let tax = $derived(Math.round((subtotal - discount) * TAX_RATE * 100) / 100);
@@ -202,8 +212,9 @@
         }
     }
 
-    function openCustomization(item: MenuItem) {
-        customizeItem = item;
+    function openCustomization(variants: MenuItem[]) {
+        customizeVariants = variants;
+        customizeItem = variants[0] ?? null;
         showCustomize = true;
     }
 
@@ -261,7 +272,10 @@
     function openEditItem(index: number) {
         editingIndex = index;
         editingCartItem = cart[index] ?? null;
-        customizeItem = cart[index]?.item ?? null;
+        const cartMenuItem = cart[index]?.item;
+        customizeItem = cartMenuItem ?? null;
+        customizeVariants = items.filter(i => i.name === cartMenuItem?.name);
+        if (customizeVariants.length === 0 && cartMenuItem) customizeVariants = [cartMenuItem];
         showCustomize = true;
     }
 
@@ -388,7 +402,7 @@
             <div class="hero-banner">
                 <div class="hero-text">
                     <h2>{formatCategory(selectedCategory)}</h2>
-                    <p>{items.length} {items.length === 1 ? 'item' : 'items'} available</p>
+                    <p>{itemGroups.length} {itemGroups.length === 1 ? 'item' : 'items'} available</p>
                 </div>
                 <div class="hero-emoji">{categoryEmojis[selectedCategory] ?? '\u{1F964}'}</div>
             </div>
@@ -416,24 +430,28 @@
                 <p class="muted-text">No items in this category.</p>
             {:else}
                 <div class="items-grid">
-                    {#each items as item (item.menuItemId)}
+                    {#each itemGroups as variants (variants[0].name)}
+                        {@const anyAvailable = variants.some(v => v.isAvailable)}
+                        {@const minPrice = Math.min(...variants.map(v => v.basePrice))}
                         <button
                             class="item-card"
-                            class:unavailable={!item.isAvailable}
+                            class:unavailable={!anyAvailable}
                             onclick={() => {
-                                openCustomization(item);
+                                openCustomization(variants);
                             }}
-                            disabled={!item.isAvailable}
+                            disabled={!anyAvailable}
                         >
                             <div class="item-icon">
-                                {categoryEmojis[item.category] ?? '\u{1F964}'}
+                                {categoryEmojis[variants[0].category] ?? '\u{1F964}'}
                             </div>
                             <div class="item-info">
-                                <span class="item-name">{toTitleCase(item.name)}</span>
+                                <span class="item-name">{toTitleCase(variants[0].name)}</span>
                             </div>
                             <div class="item-bottom">
-                                <span class="item-price">{formatCurrency(item.basePrice)}</span>
-                                {#if item.isAvailable}
+                                <span class="item-price">
+                                    {#if variants.length > 1}from&nbsp;{/if}{formatCurrency(minPrice)}
+                                </span>
+                                {#if anyAvailable}
                                     <span class="add-icon" aria-hidden="true">
                                         <svg
                                             viewBox="0 0 12 12"
@@ -480,13 +498,19 @@
                             </div>
                             <div class="cart-card-info">
                                 <span class="cart-card-name">{toTitleCase(cartItem.item.name)}</span>
-                                <span class="cart-card-details">
-                                    {cartItem.size} &middot; {cartItem.sweetness} &middot; {cartItem.iceLevel}
-                                </span>
+                                <span class="cart-card-details">Size: {toTitleCase(cartItem.size)}</span>
+                                <span class="cart-card-details">Sweetness: {cartItem.sweetness}</span>
+                                <span class="cart-card-details">{cartItem.iceLevel}</span>
                                 {#if cartItem.addOns.length > 0}
-                                    <span class="cart-card-details">
-                                        + {formatAddOns(cartItem.addOns)}
-                                    </span>
+                                    <div class="cart-addons">
+                                        <span class="cart-addons-label">Add-ons:</span>
+                                        {#each groupAddOns(cartItem.addOns) as [name, qty, price]}
+                                            <span class="cart-addon-item">
+                                                {qty > 1 ? `${qty}x ` : ''}{name}
+                                                <span class="cart-addon-price">{formatCurrency(price * qty)}</span>
+                                            </span>
+                                        {/each}
+                                    </div>
                                 {/if}
                                 <div class="cart-qty-row">
                                     <button class="qty-btn" onclick={() => decrementQuantity(i)}><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="6" x2="10" y2="6" /></svg></button>
@@ -654,6 +678,7 @@
 <ItemCustomization
     open={showCustomize}
     item={customizeItem}
+    variants={customizeVariants}
     {editingCartItem}
     highContrast={highContrast}
     magnifierOn={false}
@@ -1076,6 +1101,36 @@
     .cart-card-details {
         font-size: 0.7rem;
         color: #999;
+    }
+
+    .cart-addons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        margin-top: 0.15rem;
+        padding-left: 0.25rem;
+    }
+
+    .cart-addons-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .cart-addon-item {
+        font-size: 0.7rem;
+        color: #666;
+        padding-left: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .cart-addon-price {
+        color: #999;
+        margin-left: 0.5rem;
+        flex-shrink: 0;
     }
 
     .cart-card-price {

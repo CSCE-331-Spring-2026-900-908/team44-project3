@@ -387,15 +387,17 @@
     .category-nav {
         display: flex;
         flex-direction: column;
+        align-items: stretch;
         gap: 0.55rem;
     }
 
     .cat-btn {
+        justify-content: flex-start;
         text-align: left;
-        padding: 0.5rem 0.75rem;
+        padding: clamp(0.5rem, 1vw, 0.85rem) clamp(0.75rem, 1.2vw, 1.1rem);
         border-radius: var(--radius);
         background: transparent;
-        font-size: 1.075rem;
+        font-size: clamp(1.075rem, 1.4vw, 1.3rem);
         font-weight: 500;
         text-transform: capitalize;
         transition: background var(--transition);

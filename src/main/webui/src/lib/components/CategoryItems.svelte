@@ -72,20 +72,20 @@
 
     .item-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 0.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(clamp(140px, 15vw, 220px), 1fr));
+        gap: clamp(0.5rem, 1vw, 1rem);
     }
 
     .item-card {
         background: var(--color-surface);
         border: 4px solid var(--color-border);
         border-radius: var(--radius);
-        padding: 0.75rem;
+        padding: clamp(0.75rem, 1.5vw, 1.25rem);
         text-align: center;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 0.25rem;
+        gap: 0.35rem;
         transition: border-color var(--transition), box-shadow var(--transition);
     }
 
@@ -100,11 +100,11 @@
 
     .item-name {
         font-weight: 500;
-        font-size: 1.175rem;
+        font-size: clamp(1.175rem, 1.5vw, 1.4rem);
     }
 
     .item-price {
         color: var(--color-text-muted);
-        font-size: 1.2rem;
+        font-size: clamp(1.2rem, 1.5vw, 1.4rem);
     }
 </style>

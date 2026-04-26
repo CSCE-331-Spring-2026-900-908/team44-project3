@@ -765,7 +765,7 @@
     /* ── Category Pills ── */
     .category-strip {
         display: flex;
-        gap: 1rem;
+        gap: clamp(0.5rem, 1vw, 1rem);
         margin-bottom: 1.5rem;
         overflow-x: auto;
         padding-bottom: 0.5rem;
@@ -773,11 +773,13 @@
 
     .cat-pill {
         display: flex;
+        flex: 1;
         flex-direction: column;
         align-items: center;
-        gap: 0.4rem;
-        min-width: 80px;
-        padding: 0.75rem 0.5rem;
+        justify-content: center;
+        gap: 0.5rem;
+        min-width: 100px;
+        padding: clamp(0.75rem, 1.5vw, 1.25rem) clamp(0.5rem, 1vw, 1rem);
         border-radius: 16px;
         border: 2px solid transparent;
         background: white;
@@ -797,11 +799,11 @@
     }
 
     .cat-emoji {
-        font-size: 1.5rem;
+        font-size: clamp(1.5rem, 2.5vw, 2.25rem);
     }
 
     .cat-label {
-        font-size: 0.7rem;
+        font-size: clamp(0.7rem, 1vw, 0.95rem);
         font-weight: 600;
         text-transform: capitalize;
         color: #555;
@@ -828,14 +830,14 @@
     /* ── Items Grid ── */
     .items-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(clamp(160px, 18vw, 260px), 1fr));
+        gap: clamp(0.75rem, 1.5vw, 1.25rem);
     }
 
     .item-card {
         background: white;
         border-radius: 16px;
-        padding: 1.25rem;
+        padding: clamp(1rem, 2vw, 1.75rem);
         border: none;
         display: flex;
         flex-direction: column;
@@ -860,7 +862,7 @@
     }
 
     .item-icon {
-        font-size: 2.5rem;
+        font-size: clamp(2.5rem, 4vw, 3.5rem);
         margin-bottom: 0.25rem;
     }
 
@@ -872,7 +874,7 @@
 
     .item-name {
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: clamp(0.95rem, 1.3vw, 1.2rem);
         color: #333;
     }
 
@@ -886,13 +888,13 @@
 
     .item-price {
         font-weight: 700;
-        font-size: 1rem;
+        font-size: clamp(1rem, 1.3vw, 1.25rem);
         color: #d4712a;
     }
 
     .add-icon {
-        width: 28px;
-        height: 28px;
+        width: clamp(28px, 3vw, 36px);
+        height: clamp(28px, 3vw, 36px);
         border-radius: 50%;
         background: #d4712a;
         color: white;

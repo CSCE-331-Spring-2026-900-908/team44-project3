@@ -88,3 +88,8 @@ export function restoreCustomer(): Customer | null {
         return null;
     }
 }
+
+if (typeof sessionStorage !== 'undefined') {
+    restoreSession();
+    restoreCustomer();
+}

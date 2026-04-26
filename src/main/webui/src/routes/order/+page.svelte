@@ -362,7 +362,6 @@
         document.body.style.zoom = zoom;
 	}
 </script>
-
 <div class="zoom-controls">
 	<button onclick={zoomOut}>−</button>
 	<button onclick={zoomIn}>+</button>
@@ -378,8 +377,7 @@
         </div>
         <div class="header-right">
             <WeatherMini />
-            <button class="header-btn accessibility" onclick={() => (magnifierOn = !magnifierOn)}> Screen Magnifier </button>
-            <button class="header-btn accessibility magnifier-toggle" onclick={toggleMagnifier}> Screen Magnifier </button>
+            <button class="header-btn accessibility" onclick={toggleMagnifier}> Screen Magnifier </button>
             <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}> High Contrast </button>
             <LanguageSelector />
             {#if customer}
@@ -446,7 +444,7 @@
                         >
                             <div class="item-icon">
                                 {#if variants[0].hasImage}
-                                    <img src={menuItemImageByName(variants[0].name)} alt={variants[0].name} class="item-img" />
+                                    <img src={menuItemImageByName(variants[0].name)} alt={variants[0].name} class="item-img" style="max-width:100%;max-height:100%;object-fit:contain;" />
                                 {:else}
                                     {categoryEmojis[variants[0].category] ?? '\u{1F9CB}'}
                                 {/if}
@@ -502,7 +500,7 @@
                         <div class="cart-card" class:redeemed={redeemed > 0}>
                             <div class="cart-card-icon">
                                 {#if cartItem.item.hasImage}
-                                    <img src={menuItemImageByName(cartItem.item.name)} alt={cartItem.item.name} class="cart-img" />
+                                    <img src={menuItemImageByName(cartItem.item.name)} alt={cartItem.item.name} class="cart-img" style="max-width:100%;max-height:100%;object-fit:contain;" />
                                 {:else}
                                     {categoryEmojis[cartItem.item.category] ?? '\u{1F9CB}'}
                                 {/if}
@@ -612,7 +610,6 @@
             </div>
         </aside>
     </div>
-</div>
 </div>
 
 
@@ -741,6 +738,7 @@
 <!-- Chatbot UI (floating) -->
 <div style="--chatbot-right-offset: calc(340px + 40px);">
     <Chatbot />
+</div>
 </div>
 <MagnifierOverlay targetSelector="#magnifier-root" />
 

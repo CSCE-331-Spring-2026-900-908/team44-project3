@@ -3,19 +3,23 @@
 
     let open = $state(false);
     let input = $state('');
-
-    //Default introduction message to welcome user
     let messages = $state<Msg[]>([
         { from: 'bot', text: "Hi! I'm Boba Bob — how can I help?", time: new Date().toISOString() }
     ]);
-
     let endEl = $state<HTMLElement | null>(null);
-//Basic toggle function to open and close chat box
+    let rootEl = $state<HTMLElement | null>(null);
+
+    let dragging = $state(false);
+    let didDrag = $state(false);
+    let dragOffset = { x: 0, y: 0 };
+    let posX = $state<number | null>(null);
+    let posY = $state<number | null>(null);
+
     function toggle() {
+        if (didDrag) { didDrag = false; return; }
         open = !open;
     }
 
-//Send Function. Sends over the user prompt over to backend. Handles errors if backend is not connected
     async function send() {
         const text = input.trim();
         if (!text) return;
@@ -26,9 +30,7 @@
         try {
             const response = await fetch('/api/chatbot', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: text })
             });
 
@@ -38,22 +40,40 @@
             }
 
             const data = await response.json();
-            messages.push({ 
-                from: 'bot', 
-                text: data.text ?? 'Boba Bob did not return a response.', 
-                time: new Date().toISOString() 
+            messages.push({
+                from: 'bot',
+                text: data.text ?? 'Boba Bob did not return a response.',
+                time: new Date().toISOString()
             });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-            messages.push({ 
-                from: 'bot', 
-                text: `Sorry, I'm having trouble connecting to Boba Bob: ${errorMessage}`,
-                time: new Date().toISOString() 
+            messages.push({
+                from: 'bot',
+                text: `Sorry, I'm having trouble connecting: ${errorMessage}`,
+                time: new Date().toISOString()
             });
-            console.error('Chatbot send error:', err);
         }
     }
 
+    function onDragStart(e: PointerEvent) {
+        if (!rootEl) return;
+        dragging = true;
+        didDrag = false;
+        const rect = rootEl.getBoundingClientRect();
+        dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    }
+
+    function onDragMove(e: PointerEvent) {
+        if (!dragging) return;
+        didDrag = true;
+        posX = e.clientX - dragOffset.x;
+        posY = e.clientY - dragOffset.y;
+    }
+
+    function onDragEnd() {
+        dragging = false;
+    }
 
     $effect(() => {
         if (open || messages.length) {
@@ -62,9 +82,25 @@
     });
 </script>
 
-<!-- //Styling for Chatbot -->
+<div
+    class="chatbot-root"
+    bind:this={rootEl}
+    style={posX !== null && posY !== null ? `left:${posX}px;top:${posY}px;right:auto;bottom:auto;` : ''}
+    onpointerdown={onDragStart}
+    onpointermove={onDragMove}
+    onpointerup={onDragEnd}
+>
+    <button
+        class="chat-toggle"
+        class:hidden={open}
+        aria-label="Open chat"
+        onclick={toggle}
+    >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z" fill="currentColor" />
+        </svg>
+    </button>
 
-<div class="chatbot-root">
     {#if open}
         <div class="chat-window" role="dialog" aria-label="Chat with us">
             <header class="chat-header">
@@ -91,12 +127,6 @@
             </footer>
         </div>
     {/if}
-
-    <button class="chat-toggle" aria-label="Open chat" onclick={toggle}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z" fill="currentColor" />
-        </svg>
-    </button>
 </div>
 
 <style>
@@ -104,7 +134,7 @@
         position: fixed;
         right: var(--chatbot-right-offset, 20px);
         bottom: var(--chatbot-bottom-offset, 20px);
-        z-index: 9999;
+        z-index: 500;
         font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     }
 
@@ -123,6 +153,7 @@
     }
 
     .chat-toggle:hover { transform: translateY(-2px); }
+    .chat-toggle.hidden { display: none; }
 
     .chat-window {
         width: 340px;
@@ -134,7 +165,7 @@
         border-radius: 12px;
         box-shadow: 0 12px 40px rgba(0,0,0,0.2);
         overflow: hidden;
-        margin-bottom: 12px;
+        margin-top: 8px;
     }
 
     .chat-header {
@@ -144,6 +175,8 @@
         padding: 0.75rem 1rem;
         border-bottom: 1px solid var(--color-border, #e6e6e6);
         background: linear-gradient(180deg, rgba(0,0,0,0.02), transparent);
+        cursor: grab;
+        user-select: none;
     }
 
     .chat-title { font-weight: 700; color: var(--color-primary); }

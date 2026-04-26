@@ -26,6 +26,17 @@
         topping: '\u{1F369}'
     };
 
+    function formatAddOns(addOns: MenuItem[]): string {
+        const counts = new Map<string, number>();
+        for (const a of addOns) {
+            const name = toTitleCase(a.name);
+            counts.set(name, (counts.get(name) ?? 0) + 1);
+        }
+        return Array.from(counts.entries())
+            .map(([name, qty]) => qty > 1 ? `${qty}x ${name}` : name)
+            .join(', ');
+    }
+
     const IDLE_TIMEOUT = 30;
     const IDLE_WARNING = 10;
 
@@ -196,14 +207,20 @@
         showCustomize = true;
     }
 
+    function sameAddOns(a: MenuItem[], b: MenuItem[]): boolean {
+        if (a.length !== b.length) return false;
+        const ids = (list: MenuItem[]) => list.map(x => x.menuItemId).sort((x, y) => x - y);
+        const sa = ids(a), sb = ids(b);
+        return sa.every((id, idx) => id === sb[idx]);
+    }
+
     function addToCart(cartItem: CartItem) {
         const existingIndex = cart.findIndex(c =>
             c.item.menuItemId === cartItem.item.menuItemId &&
             c.size === cartItem.size &&
             c.sweetness === cartItem.sweetness &&
             c.iceLevel === cartItem.iceLevel &&
-            c.addOns.length === cartItem.addOns.length &&
-            c.addOns.every(a => cartItem.addOns.some(b => b.menuItemId === a.menuItemId))
+            sameAddOns(c.addOns, cartItem.addOns)
         );
         if (existingIndex >= 0) {
             cart = cart.map((c, i) =>
@@ -468,15 +485,13 @@
                                 </span>
                                 {#if cartItem.addOns.length > 0}
                                     <span class="cart-card-details">
-                                        + {cartItem.addOns
-                                            .map((a) => toTitleCase(a.name))
-                                            .join(', ')}
+                                        + {formatAddOns(cartItem.addOns)}
                                     </span>
                                 {/if}
                                 <div class="cart-qty-row">
-                                    <button class="qty-btn" onclick={() => decrementQuantity(i)}>-</button>
+                                    <button class="qty-btn" onclick={() => decrementQuantity(i)}><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="6" x2="10" y2="6" /></svg></button>
                                     <span class="qty-value">{cartItem.quantity}</span>
-                                    <button class="qty-btn" onclick={() => incrementQuantity(i)}>+</button>
+                                    <button class="qty-btn" onclick={() => incrementQuantity(i)}><svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="2" x2="6" y2="10" /><line x1="2" y1="6" x2="10" y2="6" /></svg></button>
                                     <button class="cart-edit-btn" onclick={() => openEditItem(i)}>Edit</button>
                                 </div>
                                 <div class="cart-card-bottom">

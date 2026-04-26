@@ -732,9 +732,6 @@
 <div style="--chatbot-right-offset: calc(340px + 40px);">
     <Chatbot />
 </div>
-<!-- This is the div for the magnify wrapper -->
-</div> 
-
 <MagnifierOverlay targetSelector="#magnifier-root" />
 
 <style>

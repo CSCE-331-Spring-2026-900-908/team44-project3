@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { tick } from 'svelte';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { customerCheckin } from '$lib/api';
@@ -10,7 +9,6 @@
     let error = $state('');
     let loading = $state(false);
     let starting = $state(false);
-    let showCheckin = $state(false);
     let emailInput = $state<HTMLInputElement | null>(null);
 
     $effect(() => {
@@ -23,17 +21,6 @@
     async function startOrder() {
         starting = true;
         await goto(resolve('/order'));
-    }
-
-    async function toggleCheckin() {
-        showCheckin = !showCheckin;
-        error = '';
-        if (showCheckin) {
-            await tick();
-            emailInput?.focus();
-        } else {
-            email = '';
-        }
     }
 
     async function handleCheckin(event: Event) {
@@ -75,79 +62,45 @@
         <div class="cta-stack">
             <button
                 class="start-btn"
+                class:starting
                 onclick={startOrder}
                 disabled={starting}
                 aria-label="Start a new order as a guest"
             >
                 {starting ? 'Starting…' : 'Start order'}
-                <svg
-                    class="start-btn-arrow"
-                    aria-hidden="true"
-                    viewBox="0 0 48 16"
-                    width="48"
-                    height="16"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                >
-                    <line x1="2" y1="8" x2="42" y2="8" />
-                    <polyline points="36,2 42,8 36,14" />
-                </svg>
             </button>
 
-            <div class="rewards-panel" class:open={showCheckin}>
-                <button
-                    type="button"
-                    class="rewards-toggle"
-                    onclick={toggleCheckin}
-                    aria-expanded={showCheckin}
-                    aria-controls="rewards-form"
-                >
-                    <span class="rewards-toggle-text">
-                        <span class="rewards-toggle-title">Member check-in</span>
-                        <span class="rewards-toggle-sub"> Earn points toward free drinks </span>
-                    </span>
-                    <svg
-                        class="rewards-chevron"
-                        aria-hidden="true"
-                        viewBox="0 0 16 16"
-                        width="16"
-                        height="16"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.75"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    >
-                        <polyline points="4,6 8,10 12,6" />
-                    </svg>
-                </button>
+            <div class="or-divider">
+                <span>or</span>
+            </div>
 
-                {#if showCheckin}
-                    <form id="rewards-form" onsubmit={handleCheckin}>
-                        <label for="checkin-email" class="sr-only">Email</label>
-                        <input
-                            bind:this={emailInput}
-                            id="checkin-email"
-                            type="email"
-                            pattern=".+@.+\..+"
-                            placeholder="your@email.com"
-                            bind:value={email}
-                            autocomplete="email"
-                            inputmode="email"
-                        />
+            <div class="rewards-panel open">
+                <div class="rewards-header">
+                    <span class="rewards-toggle-title">Member check-in</span>
+                    <span class="rewards-toggle-sub">Earn points toward free drinks</span>
+                </div>
 
-                        {#if error}
-                            <p class="error-text">{error}</p>
-                        {/if}
+                <form id="rewards-form" onsubmit={handleCheckin}>
+                    <label for="checkin-email" class="sr-only">Email</label>
+                    <input
+                        bind:this={emailInput}
+                        id="checkin-email"
+                        type="email"
+                        pattern=".+@.+\..+"
+                        placeholder="your@email.com"
+                        bind:value={email}
+                        autocomplete="email"
+                        inputmode="email"
+                    />
 
-                        <button type="submit" class="checkin-submit" disabled={loading}>
-                            {loading ? 'Checking in…' : 'Check In & Order'}
-                        </button>
-                    </form>
-                {/if}
+                    {#if error}
+                        <p class="error-text">{error}</p>
+                    {/if}
+
+                    <button type="submit" class="checkin-submit" disabled={loading}>
+                        {loading ? 'Checking in…' : 'Check In & Order'}
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -157,7 +110,7 @@
     .landing {
         min-height: 100vh;
         display: grid;
-        grid-template-rows: clamp(3rem, 22vh, 14rem) auto 1fr;
+        grid-template-rows: clamp(2rem, 16vh, 10rem) auto 1fr;
         justify-items: center;
         position: relative;
         overflow: hidden;
@@ -261,8 +214,8 @@
         cursor: pointer;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 1.5rem;
+        justify-content: center;
+        gap: 0.75rem;
         box-shadow:
             0 16px 32px -12px rgba(45, 32, 23, 0.35),
             0 4px 8px -4px rgba(45, 32, 23, 0.15);
@@ -289,11 +242,30 @@
 
     .start-btn-arrow {
         color: var(--color-primary);
-        transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
     .start-btn:hover:not(:disabled) .start-btn-arrow {
-        transform: translateX(6px);
+        transform: translateX(4px);
+    }
+
+
+
+    .or-divider {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .or-divider::before,
+    .or-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.25);
     }
 
     .rewards-panel {
@@ -310,23 +282,11 @@
         box-shadow: 0 16px 32px -12px rgba(45, 32, 23, 0.28);
     }
 
-    .rewards-toggle {
-        width: 100%;
-        padding: 1.125rem 1.5rem;
-        background: transparent;
-        border: none;
-        color: inherit;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        text-align: left;
-    }
-
-    .rewards-toggle-text {
+    .rewards-header {
+        padding: 1.125rem 1.5rem 0;
         display: flex;
         flex-direction: column;
+        align-items: center;
         gap: 0.125rem;
     }
 
@@ -338,21 +298,6 @@
     .rewards-toggle-sub {
         font-size: 0.875rem;
         color: var(--color-text-muted);
-    }
-
-    .rewards-chevron {
-        flex-shrink: 0;
-        color: var(--color-text-muted);
-        transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
-
-    .rewards-panel.open .rewards-chevron {
-        transform: rotate(180deg);
-        color: var(--color-text);
-    }
-
-    .rewards-toggle:hover {
-        background: #fdf6f0;
     }
 
     form {

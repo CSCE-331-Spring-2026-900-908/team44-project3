@@ -23,8 +23,8 @@
 	let showHint = $state(false);
 	let hintTimer: ReturnType<typeof setTimeout> | null = null;
 
-	const grabRingInner = 70;
-	const grabRingOuter = 20;
+	const grabRingInner = 65;
+	const grabRingOuter = 35;
 
 	function refreshMirror() {
 		if (!targetEl) return;
@@ -162,10 +162,11 @@
 		class="lens"
 		class:dragging
 		bind:this={lensEl}
-		style:width={`${lensSize}px`}
-		style:height={`${lensSize}px`}
-		style:transform={`translate(${x - lensSize / 2}px, ${y - lensSize / 2}px)`}
+		style:width={`${lensSize + grabRingOuter * 2}px`}
+		style:height={`${lensSize + grabRingOuter * 2}px`}
+		style:transform={`translate(${x - lensSize / 2 - grabRingOuter}px, ${y - lensSize / 2 - grabRingOuter}px)`}
 		style:cursor={cursorStyle}
+		style:--outer-pad={`${grabRingOuter}px`}
 		onmousedown={onMouseDown}
 		onmousemove={onLensHover}
 		ontouchstart={onTouchStart}
@@ -191,8 +192,9 @@
 		<div class="lens-glare" aria-hidden="true"></div>
 
 		{#if showHint && !dragging}
-			<div class="hint-wrapper" transition:fade={{ duration: 300 }}>
-				<div class="hint-bubble">drag edge to move</div>
+			<div class="pulse-ring" aria-hidden="true" in:fade={{ duration: 800 }} out:fade={{ duration: 300 }}></div>
+			<div class="hint-wrapper" in:fade={{ duration: 800 }} out:fade={{ duration: 300 }}>
+				<div class="hint-bubble">Drag Edge to Move</div>
 				<div class="hint-arrow"></div>
 			</div>
 		{/if}
@@ -209,16 +211,7 @@
 		overflow: visible;
 		pointer-events: auto;
 		will-change: transform;
-		box-shadow:
-			0 0 24px 8px rgba(0, 0, 0, 0.12),
-			0 0 60px 12px rgba(0, 0, 0, 0.06);
 		animation: lens-fade-in 0.2s ease-out;
-	}
-
-	.lens.dragging {
-		box-shadow:
-			0 0 30px 10px rgba(0, 0, 0, 0.18),
-			0 0 80px 16px rgba(0, 0, 0, 0.1);
 	}
 
 	@keyframes lens-fade-in {
@@ -228,10 +221,20 @@
 
 	.lens-viewport {
 		position: absolute;
-		inset: 0;
+		inset: var(--outer-pad);
 		overflow: hidden;
 		border-radius: 50%;
 		pointer-events: none;
+		box-shadow:
+			0 0 10px 4px rgba(0, 0, 0, 0.18),
+			0 0 30px 10px rgba(0, 0, 0, 0.1);
+		transition: box-shadow 0.15s;
+	}
+
+	.lens.dragging .lens-viewport {
+		box-shadow:
+			0 0 14px 6px rgba(0, 0, 0, 0.22),
+			0 0 40px 14px rgba(0, 0, 0, 0.12);
 	}
 
 	.lens-content {
@@ -248,7 +251,7 @@
 
 	.lens-ring {
 		position: absolute;
-		inset: 0;
+		inset: var(--outer-pad);
 		border-radius: 50%;
 		pointer-events: none;
 		z-index: 5;
@@ -261,7 +264,7 @@
 
 	.lens-glare {
 		position: absolute;
-		inset: 0;
+		inset: var(--outer-pad);
 		border-radius: 50%;
 		pointer-events: none;
 		z-index: 6;
@@ -272,9 +275,50 @@
 		);
 	}
 
+	.pulse-ring {
+		position: absolute;
+		inset: var(--outer-pad);
+		border-radius: 50%;
+		pointer-events: none;
+		z-index: 8;
+		border: 2px solid transparent;
+		background:
+			conic-gradient(
+				from var(--pulse-angle, 0deg),
+				transparent 0deg,
+				rgba(230, 140, 50, 0.6) 30deg,
+				rgba(230, 140, 50, 0.9) 60deg,
+				rgba(230, 140, 50, 0.6) 90deg,
+				transparent 130deg,
+				transparent 360deg
+			)
+			border-box;
+		-webkit-mask:
+			linear-gradient(#000 0 0) content-box,
+			linear-gradient(#000 0 0);
+		mask:
+			linear-gradient(#000 0 0) content-box,
+			linear-gradient(#000 0 0);
+		-webkit-mask-composite: xor;
+		mask-composite: exclude;
+		padding: 3px;
+		animation: pulse-spin 2.5s linear infinite;
+	}
+
+	@keyframes pulse-spin {
+		from { --pulse-angle: 0deg; }
+		to { --pulse-angle: 360deg; }
+	}
+
+	@property --pulse-angle {
+		syntax: '<angle>';
+		initial-value: 0deg;
+		inherits: false;
+	}
+
 	.hint-wrapper {
 		position: absolute;
-		top: -58px;
+		top: calc(var(--outer-pad) - 58px);
 		left: 50%;
 		transform: translateX(-50%);
 		z-index: 20;
@@ -291,13 +335,13 @@
 	}
 
 	.hint-bubble {
-		padding: 0.4rem 0.9rem;
-		border-radius: 12px;
+		padding: 0.5rem 1.1rem;
+		border-radius: 14px;
 		background: linear-gradient(135deg, rgba(60, 60, 60, 0.92), rgba(30, 30, 30, 0.92));
 		backdrop-filter: blur(8px);
 		-webkit-backdrop-filter: blur(8px);
 		color: white;
-		font-size: 0.78rem;
+		font-size: 0.82rem;
 		font-weight: 500;
 		letter-spacing: 0.02em;
 		white-space: nowrap;

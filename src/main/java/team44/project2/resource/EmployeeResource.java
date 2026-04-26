@@ -26,19 +26,18 @@ public class EmployeeResource {
 
     @POST
     public Response add(Employee employee) {
-        employeeService.addEmployee(employee);
-        return Response.status(Response.Status.CREATED).build();
+        Employee created = employeeService.addEmployee(employee);
+        return Response.status(Response.Status.CREATED).entity(created).build();
     }
 
     @PUT
     @Path("/{id}")
     public Response update(@PathParam("id") int id, Employee employee) {
-        Employee updated = new Employee(
+        Employee updated = employeeService.updateEmployee(new Employee(
                 id, employee.firstName(), employee.lastName(),
                 employee.role(), employee.startDate(), employee.email(),
                 employee.passwordHash(), employee.isActive()
-        );
-        employeeService.updateEmployee(updated);
+        ));
         return Response.ok(updated).build();
     }
 

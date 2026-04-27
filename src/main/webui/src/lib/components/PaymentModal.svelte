@@ -45,7 +45,7 @@
     );
     let tax = $derived(Math.round((subtotal - discount) * TAX_RATE * 100) / 100);
     let tipAmount = $derived(
-        customTip ? parseFloat(customTip) || 0 : (subtotal - discount) * tipPercent
+        Math.max(0, customTip ? parseFloat(customTip) || 0 : (subtotal - discount) * tipPercent)
     );
     let total = $derived(subtotal - discount + tax + tipAmount);
 
@@ -137,6 +137,10 @@
                     bind:value={customTip}
                     min="0"
                     step="0.01"
+                    oninput={(e) => {
+                        const v = parseFloat((e.target as HTMLInputElement).value);
+                        if (v < 0) customTip = '0';
+                    }}
                 />
                 <button
                     class="btn-primary"

@@ -1,6 +1,8 @@
 package team44.project2.resource;
 
 import io.smallrye.common.annotation.Blocking;
+import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -62,23 +64,22 @@ public class OrderResource {
 
     @POST
     @Path("/{orderId}/email-receipt")
-    public Response emailReceipt(@PathParam("orderId") int orderId, EmailReceiptRequest req) {
+    @NonBlocking
+    public Uni<Response> emailReceipt(@PathParam("orderId") int orderId, EmailReceiptRequest req) {
         if (req.email() == null || req.email().isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST)
+            return Uni.createFrom().item(Response.status(Response.Status.BAD_REQUEST)
                     .entity("{\"error\":\"Email address is required\"}")
-                    .build();
+                    .build());
         }
-        boolean sent = emailService.sendReceipt(
-                req.email(), orderId,
-                req.subtotal(), req.tip(), req.total(),
-                req.pointsEarned(),
-                req.items() != null ? req.items() : List.of()
-        );
-        if (!sent) {
-            return Response.serverError()
-                    .entity("{\"error\":\"Failed to send email\"}")
-                    .build();
-        }
-        return Response.ok("{\"sent\":true}").build();
+        return emailService.sendReceipt(
+                        req.email(), orderId,
+                        req.subtotal(), req.tip(), req.total(),
+                        req.pointsEarned(),
+                        req.items() != null ? req.items() : List.of()
+                )
+                .replaceWith(Response.ok("{\"sent\":true}").build())
+                .onFailure().recoverWithItem(Response.serverError()
+                        .entity("{\"error\":\"Failed to send email\"}")
+                        .build());
     }
 }

@@ -2,7 +2,8 @@ package team44.project2.service;
 
 import io.quarkus.logging.Log;
 import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.Mailer;
+import io.quarkus.mailer.reactive.ReactiveMailer;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -14,7 +15,7 @@ import java.util.List;
 public class EmailService {
 
     @Inject
-    Mailer mailer;
+    ReactiveMailer mailer;
 
     public record AddOnItem(String name, BigDecimal price) {}
 
@@ -28,7 +29,7 @@ public class EmailService {
             BigDecimal unitPrice
     ) {}
 
-    public boolean sendReceipt(
+    public Uni<Void> sendReceipt(
             String toEmail,
             int orderId,
             BigDecimal subtotal,
@@ -37,15 +38,10 @@ public class EmailService {
             int pointsEarned,
             List<ReceiptItem> items
     ) {
-        try {
-            String html = buildReceiptHtml(orderId, subtotal, tip, total, pointsEarned, items);
-            mailer.send(Mail.withHtml(toEmail, "Your Boba Receipt – Order #" + orderId, html));
-            Log.infof("Receipt email sent to %s for order #%d", toEmail, orderId);
-            return true;
-        } catch (Exception e) {
-            Log.errorf(e, "Failed to send receipt email to %s for order #%d", toEmail, orderId);
-            return false;
-        }
+        String html = buildReceiptHtml(orderId, subtotal, tip, total, pointsEarned, items);
+        return mailer.send(Mail.withHtml(toEmail, "Your Boba Receipt – Order #" + orderId, html))
+                .onItem().invoke(() -> Log.infof("Receipt email sent to %s for order #%d", toEmail, orderId))
+                .onFailure().invoke(e -> Log.errorf(e, "Failed to send receipt email to %s for order #%d", toEmail, orderId));
     }
 
     private String buildReceiptHtml(

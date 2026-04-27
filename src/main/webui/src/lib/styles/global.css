@@ -251,3 +251,31 @@ body {
     position: static !important;
 }
 .goog-te-gadget { display: none !important; }
+
+/* Magnifier clone overrides — ensure chatbot/modals positioned correctly inside cloned content */
+.lens-content .chatbot-root,
+.lens-content .backdrop {
+    position: absolute !important;
+}
+.lens-content .chatbot-root {
+    display: block !important;
+    visibility: visible !important;
+    z-index: 9999 !important;
+}
+.lens-content .backdrop {
+    background: transparent !important;
+}
+.lens-content .idle-overlay,
+.lens-content .zoom-controls {
+    display: none !important;
+}
+.lens-content * {
+    pointer-events: none !important;
+}
+.lens-content img,
+.lens-content video,
+.lens-content canvas {
+    will-change: auto !important;
+    transform: none !important;
+    backface-visibility: visible !important;
+}

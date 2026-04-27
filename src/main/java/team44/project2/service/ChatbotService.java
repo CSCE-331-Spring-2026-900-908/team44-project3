@@ -93,7 +93,7 @@ public class ChatbotService {
     @ConfigProperty(name = "GEMINI_API_KEY", defaultValue = "")
     String geminiApiKey;
 
-    public String generateReply(String prompt) {
+    public String generateReply(String prompt, List<HistoryEntry> history) {
         if (geminiApiKey == null || geminiApiKey.isBlank()) {
             throw new IllegalStateException("Missing GEMINI_API_KEY environment variable");
         }

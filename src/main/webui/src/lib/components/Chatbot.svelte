@@ -6,6 +6,13 @@
     let messages = $state<Msg[]>([
         { from: 'bot', text: "Hi! I'm Boba Bob — how can I help?", time: new Date().toISOString() }
     ]);
+
+    // Gets last 5 messages for conversation context 
+    function getConversationHistory(): { from: string; text: string }[] {
+        const history = messages.slice(-5);
+        return history.map(m => ({ from: m.from, text: m.text }));
+    }
+
     let endEl = $state<HTMLElement | null>(null);
     let rootEl = $state<HTMLElement | null>(null);
 
@@ -32,8 +39,13 @@
         input = '';
 
         try {
+            const history = getConversationHistory();
             const response = await fetch('/api/chatbot', {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: text, history: history })
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: text })
             });

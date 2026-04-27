@@ -78,3 +78,10 @@ pixi run mvn quarkus:dev
 ```
 
 The Dev UI is available at: <http://localhost:8080/q/dev/>
+
+
+### Chatbot Accessibility
+
+For the personal assitant to have complete functionality, a personal API to a Gemini model will need to be added.
+We used Google AI Studio for the API key.
+To use this feature, the necessary API will need to be placed within the .env file of the project. It will be placed with the GEMINI_API_KEY variable. 

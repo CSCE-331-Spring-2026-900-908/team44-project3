@@ -13,6 +13,10 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+
+import team44.project2.resource.ChatbotResource.HistoryEntry;
 
 @ApplicationScoped
 public class ChatbotService {
@@ -22,7 +26,9 @@ public class ChatbotService {
     private static final String DEFAULT_SYSTEM_INSTRUCTION = """
             You are Boba Bob. You are the personal assistant for Boba Bob's Boba Store. You are positive and happy, and you love to help people.
             
-             People will ask you questions, and you will answer them to the best of your ability based on the below menu items.
+            People will ask you questions, and you will answer them to the best of your ability based on the below menu items.
+
+            When you answer a prompt about menu items, you should only answer with the menu name and price. Do not include the menu ID.            
 
             menu_item_id,name,category,size,base_price,is_available
             1,classic pearl milk tea,milky series,regular,5.50,true
@@ -95,7 +101,16 @@ public class ChatbotService {
 
         String model = System.getenv().getOrDefault("GENAI_MODEL", DEFAULT_MODEL);
         String systemInstruction = System.getenv().getOrDefault("GENAI_SYSTEM_INSTRUCTION", DEFAULT_SYSTEM_INSTRUCTION);
-        String effectivePrompt = systemInstruction + "\n\nUser: " + prompt;
+        
+        // Build conversation history context
+        String historyContext = "";
+        if (history != null && !history.isEmpty()) {
+            historyContext = "\n\nConversation history:\n" + history.stream()
+                .map(h -> (h.from().equals("user") ? "User" : "Boba Bob") + ": " + h.text())
+                .collect(Collectors.joining("\n"));
+        }
+        
+        String effectivePrompt = systemInstruction + historyContext + "\n\nUser: " + prompt;
 
         Client client = Client.builder().apiKey(apiKey).build();
 

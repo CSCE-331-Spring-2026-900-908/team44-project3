@@ -2,7 +2,7 @@ package team44.project2.service;
 
 import io.quarkus.logging.Log;
 import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.ReactiveMailer;
+import io.quarkus.mailer.reactive.ReactiveMailer;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 

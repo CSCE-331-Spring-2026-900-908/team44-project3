@@ -333,6 +333,12 @@
 		position: absolute !important;
 	}
 
+	.lens-content :global(.chatbot-root) {
+		display: block !important;
+		visibility: visible !important;
+		z-index: 9999 !important;
+	}
+
 	.lens-content :global(.backdrop) {
 		background: transparent !important;
 	}

@@ -12,11 +12,15 @@
     let dragging = $state(false);
     let didDrag = $state(false);
     let dragOffset = { x: 0, y: 0 };
+    let dragStartX = 0;
+    let dragStartY = 0;
     let posX = $state<number | null>(null);
     let posY = $state<number | null>(null);
+    const DRAG_THRESHOLD = 5;
 
     function toggle() {
         if (didDrag) { didDrag = false; return; }
+        if (!open) recomputeOpenDirection();
         open = !open;
     }
 
@@ -59,6 +63,8 @@
         if (!rootEl) return;
         dragging = true;
         didDrag = false;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
         const rect = rootEl.getBoundingClientRect();
         dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -66,6 +72,9 @@
 
     function onDragMove(e: PointerEvent) {
         if (!dragging) return;
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
+        if (!didDrag && Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
         didDrag = true;
         posX = e.clientX - dragOffset.x;
         posY = e.clientY - dragOffset.y;
@@ -80,6 +89,16 @@
             endEl?.scrollIntoView({ behavior: 'smooth' });
         }
     });
+
+    let openUp = $state(true);
+    let openLeft = $state(true);
+
+    function recomputeOpenDirection() {
+        if (!rootEl) return;
+        const rect = rootEl.getBoundingClientRect();
+        openUp = rect.top + 28 > window.innerHeight / 2;
+        openLeft = rect.left + 28 > window.innerWidth / 2;
+    }
 </script>
 
 <div
@@ -90,19 +109,8 @@
     onpointermove={onDragMove}
     onpointerup={onDragEnd}
 >
-    <button
-        class="chat-toggle"
-        class:hidden={open}
-        aria-label="Open chat"
-        onclick={toggle}
-    >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z" fill="currentColor" />
-        </svg>
-    </button>
-
     {#if open}
-        <div class="chat-window" role="dialog" aria-label="Chat with us">
+        <div class="chat-window" class:open-up={openUp} class:open-left={openLeft} role="dialog" aria-label="Chat with us">
             <header class="chat-header">
                 <div class="chat-title">Boba Bob</div>
                 <button class="chat-close" aria-label="Close" onclick={toggle}>&times;</button>
@@ -127,6 +135,17 @@
             </footer>
         </div>
     {/if}
+
+    <button
+        class="chat-toggle"
+        class:hidden={open}
+        aria-label="Open chat"
+        onclick={toggle}
+    >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z" fill="currentColor" />
+        </svg>
+    </button>
 </div>
 
 <style>
@@ -156,6 +175,7 @@
     .chat-toggle.hidden { display: none; }
 
     .chat-window {
+        position: absolute;
         width: 340px;
         height: 460px;
         display: flex;
@@ -165,7 +185,22 @@
         border-radius: 12px;
         box-shadow: 0 12px 40px rgba(0,0,0,0.2);
         overflow: hidden;
-        margin-top: 8px;
+    }
+
+    .chat-window.open-up {
+        bottom: 64px;
+    }
+
+    .chat-window:not(.open-up) {
+        top: 64px;
+    }
+
+    .chat-window.open-left {
+        right: 0;
+    }
+
+    .chat-window:not(.open-left) {
+        left: 0;
     }
 
     .chat-header {

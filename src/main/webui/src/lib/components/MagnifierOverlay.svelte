@@ -3,7 +3,7 @@
 	import { magnifierEnabled } from '$lib/stores/magnifier';
 	import { fade } from 'svelte/transition';
 
-	let { targetSelector = '#magnifier-root' } = $props();
+	let { targetSelector = '#magnifier-root', highContrast = false } = $props();
 
 	let lensSize = $state(340);
 	let zoom = $state(1.5);
@@ -26,7 +26,20 @@
 
 	function refreshMirror() {
 		if (!targetEl) return;
-		mirrorHtml = targetEl.innerHTML;
+		const clone = targetEl.cloneNode(true) as HTMLElement;
+		const realInputs = targetEl.querySelectorAll('input, textarea');
+		const clonedInputs = clone.querySelectorAll('input, textarea');
+		realInputs.forEach((real, i) => {
+			const cloned = clonedInputs[i];
+			if (!cloned) return;
+			const v = (real as HTMLInputElement | HTMLTextAreaElement).value;
+			if (cloned.tagName === 'TEXTAREA') {
+				cloned.textContent = v;
+			} else {
+				cloned.setAttribute('value', v);
+			}
+		});
+		mirrorHtml = clone.innerHTML;
 	}
 
 	function resetHintTimer() {
@@ -55,6 +68,10 @@
 		document.addEventListener('mouseup', onPointerUp, true);
 		document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
 		document.addEventListener('touchend', onPointerUp, true);
+		document.addEventListener('input', refreshMirror, true);
+		document.addEventListener('change', refreshMirror, true);
+		document.addEventListener('focusin', refreshMirror, true);
+		document.addEventListener('focusout', refreshMirror, true);
 
 		resetHintTimer();
 
@@ -64,6 +81,10 @@
 			document.removeEventListener('mouseup', onPointerUp, true);
 			document.removeEventListener('touchmove', onTouchMove, true);
 			document.removeEventListener('touchend', onPointerUp, true);
+			document.removeEventListener('input', refreshMirror, true);
+			document.removeEventListener('change', refreshMirror, true);
+			document.removeEventListener('focusin', refreshMirror, true);
+			document.removeEventListener('focusout', refreshMirror, true);
 			if (hintTimer) clearTimeout(hintTimer);
 		};
 	});
@@ -80,14 +101,21 @@
 		lensEl.style.pointerEvents = 'none';
 		const target = document.elementFromPoint(pageX, pageY);
 		lensEl.style.pointerEvents = '';
-		if (target) {
-			target.dispatchEvent(new MouseEvent('click', {
-				clientX: pageX,
-				clientY: pageY,
-				bubbles: true,
-				cancelable: true,
-				view: window
-			}));
+		if (!target) return;
+
+		const opts: MouseEventInit = {
+			clientX: pageX,
+			clientY: pageY,
+			bubbles: true,
+			cancelable: true,
+			view: window,
+			button: 0
+		};
+		target.dispatchEvent(new MouseEvent('mousedown', opts));
+		target.dispatchEvent(new MouseEvent('mouseup', opts));
+		target.dispatchEvent(new MouseEvent('click', opts));
+		if (target instanceof HTMLElement) {
+			setTimeout(() => target.focus(), 0);
 		}
 	}
 
@@ -167,6 +195,7 @@
 		role="application"
 		aria-label="Screen magnifier"
 		class:dragging
+		class:high-contrast={highContrast}
 		bind:this={lensEl}
 		style:width={`${lensSize + grabRingOuter * 2}px`}
 		style:height={`${lensSize + grabRingOuter * 2}px`}
@@ -237,6 +266,17 @@
 			0 0 50px 6px rgba(0, 0, 0, 0.12);
 	}
 
+	.lens.high-contrast {
+		box-shadow:
+			0 0 0 3px white,
+			0 4px 20px rgba(255, 255, 255, 0.5),
+			0 0 50px 6px rgba(255, 255, 255, 0.4);
+	}
+
+	.lens.high-contrast :global(.lens-ring) {
+		border-color: white !important;
+	}
+
 	@keyframes lens-fade-in {
 		from { opacity: 0; }
 		to { opacity: 1; }
@@ -284,9 +324,13 @@
 	}
 
 	.lens-content :global(.idle-overlay),
-	.lens-content :global(.zoom-controls),
-	.lens-content :global(.chatbot-root) {
+	.lens-content :global(.zoom-controls) {
 		display: none !important;
+	}
+
+	.lens-content :global(.chatbot-root),
+	.lens-content :global(.backdrop) {
+		position: absolute !important;
 	}
 
 	.lens-content :global(.backdrop) {

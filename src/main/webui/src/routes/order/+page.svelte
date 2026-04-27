@@ -740,7 +740,7 @@
     <Chatbot />
 </div>
 </div>
-<MagnifierOverlay targetSelector="#magnifier-root" />
+<MagnifierOverlay targetSelector="#magnifier-root" highContrast={highContrast} />
 
 <style>
     /* ── Page ── */

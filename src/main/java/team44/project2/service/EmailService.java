@@ -1,11 +1,11 @@
 package team44.project2.service;
 
 import io.quarkus.logging.Log;
-import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.reactive.ReactiveMailer;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -15,7 +15,14 @@ import java.util.List;
 public class EmailService {
 
     @Inject
-    ReactiveMailer mailer;
+    @RestClient
+    ResendClient resendClient;
+
+    @ConfigProperty(name = "RESEND_API_KEY", defaultValue = "")
+    String resendApiKey;
+
+    @ConfigProperty(name = "RECEIPT_FROM")
+    String fromAddress;
 
     public record AddOnItem(String name, BigDecimal price) {}
 
@@ -38,10 +45,20 @@ public class EmailService {
             int pointsEarned,
             List<ReceiptItem> items
     ) {
+        if (resendApiKey == null || resendApiKey.isBlank()) {
+            return Uni.createFrom().failure(new IllegalStateException("Missing RESEND_API_KEY environment variable"));
+        }
         String html = buildReceiptHtml(orderId, subtotal, tip, total, pointsEarned, items);
-        return mailer.send(Mail.withHtml(toEmail, "Your Boba Receipt – Order #" + orderId, html))
-                .onItem().invoke(() -> Log.infof("Receipt email sent to %s for order #%d", toEmail, orderId))
-                .onFailure().invoke(e -> Log.errorf(e, "Failed to send receipt email to %s for order #%d", toEmail, orderId));
+        var request = new ResendClient.SendRequest(
+                fromAddress,
+                List.of(toEmail),
+                "Your Boba Receipt – Order #" + orderId,
+                html
+        );
+        return resendClient.sendEmail("Bearer " + resendApiKey, request)
+                .onItem().invoke(resp -> Log.infof("Receipt email sent to %s for order #%d (resend id=%s)", toEmail, orderId, resp.id()))
+                .onFailure().invoke(e -> Log.errorf(e, "Failed to send receipt email to %s for order #%d", toEmail, orderId))
+                .replaceWithVoid();
     }
 
     private String buildReceiptHtml(

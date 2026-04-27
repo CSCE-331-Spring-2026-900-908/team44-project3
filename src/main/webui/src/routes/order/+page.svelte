@@ -809,17 +809,20 @@
     }
 
     .header-btn.accessibility{
-        border-color: #65a4ed;
-        color: #65a4ed;
+        border-color: #2d2017;
+        color: #2d2017;
         font-size: 0.8rem;
-    } 
+        position: relative;
+        z-index: 10001;
+        background: white;
+    }
 
     .header-btn.accessibility:hover{
-        border-color: #65a4ed;
-        background: #faffe2;
-        color: #65a4ed;
+        border-color: #2d2017;
+        background: #2d2017;
+        color: white;
         font-size: 0.8rem;
-    } 
+    }
 
     /* zoom controls */
 

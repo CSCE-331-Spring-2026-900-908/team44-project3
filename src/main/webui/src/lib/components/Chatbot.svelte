@@ -42,12 +42,8 @@
             const history = getConversationHistory();
             const response = await fetch('/api/chatbot', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ prompt: text, history: history })
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: text })
+                body: JSON.stringify({ prompt: text, history })
             });
 
             if (!response.ok) {

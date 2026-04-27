@@ -92,15 +92,12 @@ public class ChatbotService {
     @Inject
     @ConfigProperty(name = "GEMINI_API_KEY", defaultValue = "")
     String geminiApiKey;
-//handles the response fromG GEMINI API
-    public String generateReply(String prompt, List<HistoryEntry> history) {
-        String apiKey = geminiApiKey; 
-        if (apiKey == null || apiKey.isBlank()) {
-            apiKey = System.getenv("GENAI_API_KEY");
+
+    public String generateReply(String prompt) {
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            throw new IllegalStateException("Missing GEMINI_API_KEY environment variable");
         }
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException("Missing GEMINI_API_KEY or GENAI_API_KEY environment variable");
-        }
+        String apiKey = geminiApiKey;
 
         String model = System.getenv().getOrDefault("GENAI_MODEL", DEFAULT_MODEL);
         String systemInstruction = System.getenv().getOrDefault("GENAI_SYSTEM_INSTRUCTION", DEFAULT_SYSTEM_INSTRUCTION);

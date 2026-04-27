@@ -15,7 +15,7 @@
     </div>
     <header class="portal-header">
         <img src="/boba.png" alt="" class="logo" />
-        <h1>Team 44 Boba</h1>
+        <h1>Boba Bob's</h1>
         <p class="subtitle">Select your station</p>
     </header>
 
@@ -85,7 +85,7 @@
     </nav>
 
     <footer class="portal-footer">
-        <span>Bubble-tea POS · team44</span>
+        <span>Boba Bob's POS</span>
     </footer>
 </div>
 

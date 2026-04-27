@@ -3,7 +3,7 @@
 	import { magnifierEnabled } from '$lib/stores/magnifier';
 	import { fade } from 'svelte/transition';
 
-	let { targetSelector = '#magnifier-root' } = $props();
+	let { targetSelector = '#magnifier-root', highContrast = false } = $props();
 
 	let lensSize = $state(340);
 	let zoom = $state(1.5);
@@ -11,7 +11,6 @@
 	let x = $state(window.innerWidth / 2);
 	let y = $state(window.innerHeight / 3);
 	let dragging = $state(false);
-	let hoverEdge = $state(false);
 	let dragOffsetX = 0;
 	let dragOffsetY = 0;
 
@@ -23,12 +22,24 @@
 	let showHint = $state(false);
 	let hintTimer: ReturnType<typeof setTimeout> | null = null;
 
-	const grabRingInner = 65;
-	const grabRingOuter = 35;
+	const grabRingOuter = 0;
 
 	function refreshMirror() {
 		if (!targetEl) return;
-		mirrorHtml = targetEl.outerHTML;
+		const clone = targetEl.cloneNode(true) as HTMLElement;
+		const realInputs = targetEl.querySelectorAll('input, textarea');
+		const clonedInputs = clone.querySelectorAll('input, textarea');
+		realInputs.forEach((real, i) => {
+			const cloned = clonedInputs[i];
+			if (!cloned) return;
+			const v = (real as HTMLInputElement | HTMLTextAreaElement).value;
+			if (cloned.tagName === 'TEXTAREA') {
+				cloned.textContent = v;
+			} else {
+				cloned.setAttribute('value', v);
+			}
+		});
+		mirrorHtml = clone.innerHTML;
 	}
 
 	function resetHintTimer() {
@@ -57,6 +68,10 @@
 		document.addEventListener('mouseup', onPointerUp, true);
 		document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
 		document.addEventListener('touchend', onPointerUp, true);
+		document.addEventListener('input', refreshMirror, true);
+		document.addEventListener('change', refreshMirror, true);
+		document.addEventListener('focusin', refreshMirror, true);
+		document.addEventListener('focusout', refreshMirror, true);
 
 		resetHintTimer();
 
@@ -66,65 +81,66 @@
 			document.removeEventListener('mouseup', onPointerUp, true);
 			document.removeEventListener('touchmove', onTouchMove, true);
 			document.removeEventListener('touchend', onPointerUp, true);
+			document.removeEventListener('input', refreshMirror, true);
+			document.removeEventListener('change', refreshMirror, true);
+			document.removeEventListener('focusin', refreshMirror, true);
+			document.removeEventListener('focusout', refreshMirror, true);
 			if (hintTimer) clearTimeout(hintTimer);
 		};
 	});
 
-	function isEdge(clientX: number, clientY: number): boolean {
-		const dx = clientX - x;
-		const dy = clientY - y;
-		const dist = Math.sqrt(dx * dx + dy * dy);
-		const outerEdge = lensSize / 2 + grabRingOuter;
-		const innerEdge = lensSize / 2 - grabRingInner;
-		return dist >= innerEdge && dist <= outerEdge;
-	}
+	let didMove = false;
+	let downX = 0;
+	let downY = 0;
+	const MOVE_THRESHOLD = 5;
 
 	function clickThrough(clientX: number, clientY: number) {
 		if (!lensEl) return;
-		lensEl.style.visibility = 'hidden';
-		const target = document.elementFromPoint(clientX, clientY);
-		lensEl.style.visibility = '';
-		if (target instanceof HTMLElement) {
-			target.focus();
-			target.click();
-		}
-	}
+		const pageX = x + (clientX - x) / zoom;
+		const pageY = y + (clientY - y) / zoom;
+		lensEl.style.pointerEvents = 'none';
+		const target = document.elementFromPoint(pageX, pageY);
+		lensEl.style.pointerEvents = '';
+		if (!target) return;
 
-	function onLensHover(event: MouseEvent) {
-		if (!dragging) {
-			hoverEdge = isEdge(event.clientX, event.clientY);
+		const opts: MouseEventInit = {
+			clientX: pageX,
+			clientY: pageY,
+			bubbles: true,
+			cancelable: true,
+			view: window,
+			button: 0
+		};
+		target.dispatchEvent(new MouseEvent('mousedown', opts));
+		target.dispatchEvent(new MouseEvent('mouseup', opts));
+		target.dispatchEvent(new MouseEvent('click', opts));
+		if (target instanceof HTMLElement) {
+			setTimeout(() => target.focus(), 0);
 		}
 	}
 
 	function onMouseDown(event: MouseEvent) {
-		if (isEdge(event.clientX, event.clientY)) {
-			dragging = true;
-			dragOffsetX = x - event.clientX;
-			dragOffsetY = y - event.clientY;
-			resetHintTimer();
-			event.preventDefault();
-			event.stopPropagation();
-		} else {
-			clickThrough(event.clientX, event.clientY);
-			event.preventDefault();
-			event.stopPropagation();
-		}
+		dragging = true;
+		didMove = false;
+		downX = event.clientX;
+		downY = event.clientY;
+		dragOffsetX = x - event.clientX;
+		dragOffsetY = y - event.clientY;
+		event.preventDefault();
+		event.stopPropagation();
 	}
 
 	function onTouchStart(event: TouchEvent) {
 		const t = event.touches[0];
-		if (isEdge(t.clientX, t.clientY)) {
-			dragging = true;
-			dragOffsetX = x - t.clientX;
-			dragOffsetY = y - t.clientY;
-			resetHintTimer();
-			event.preventDefault();
-			event.stopPropagation();
-		} else {
-			clickThrough(t.clientX, t.clientY);
-			event.preventDefault();
-			event.stopPropagation();
-		}
+		if (!t) return;
+		dragging = true;
+		didMove = false;
+		downX = t.clientX;
+		downY = t.clientY;
+		dragOffsetX = x - t.clientX;
+		dragOffsetY = y - t.clientY;
+		event.preventDefault();
+		event.stopPropagation();
 	}
 
 	function moveLens(clientX: number, clientY: number) {
@@ -135,24 +151,40 @@
 
 	function onPointerMove(event: MouseEvent) {
 		if (!dragging) return;
-		event.preventDefault();
-		moveLens(event.clientX, event.clientY);
+		const dx = event.clientX - downX;
+		const dy = event.clientY - downY;
+		if (!didMove && Math.sqrt(dx * dx + dy * dy) > MOVE_THRESHOLD) didMove = true;
+		if (didMove) {
+			event.preventDefault();
+			moveLens(event.clientX, event.clientY);
+		}
 	}
 
 	function onTouchMove(event: TouchEvent) {
 		if (!dragging) return;
-		event.preventDefault();
-		moveLens(event.touches[0].clientX, event.touches[0].clientY);
-	}
-
-	function onPointerUp() {
-		if (dragging) {
-			dragging = false;
-			resetHintTimer();
+		const t = event.touches[0];
+		if (!t) return;
+		const dx = t.clientX - downX;
+		const dy = t.clientY - downY;
+		if (!didMove && Math.sqrt(dx * dx + dy * dy) > MOVE_THRESHOLD) didMove = true;
+		if (didMove) {
+			event.preventDefault();
+			moveLens(t.clientX, t.clientY);
 		}
 	}
 
-	let cursorStyle = $derived(dragging ? 'grabbing' : hoverEdge ? 'grab' : 'default');
+	function onPointerUp(event: MouseEvent) {
+		if (dragging) {
+			dragging = false;
+			if (!didMove) {
+				clickThrough(event.clientX, event.clientY);
+			} else {
+				resetHintTimer();
+			}
+		}
+	}
+
+	let cursorStyle = $derived(dragging && didMove ? 'grabbing' : 'pointer');
 </script>
 
 {#if $magnifierEnabled && targetEl}
@@ -160,45 +192,62 @@
 
 	<div
 		class="lens"
+		role="application"
+		aria-label="Screen magnifier"
 		class:dragging
+		class:high-contrast={highContrast}
 		bind:this={lensEl}
 		style:width={`${lensSize + grabRingOuter * 2}px`}
 		style:height={`${lensSize + grabRingOuter * 2}px`}
-		style:transform={`translate(${x - lensSize / 2 - grabRingOuter}px, ${y - lensSize / 2 - grabRingOuter}px)`}
+		style:transform={`translate3d(${x - lensSize / 2 - grabRingOuter}px, ${y - lensSize / 2 - grabRingOuter}px, 0)`}
 		style:cursor={cursorStyle}
 		style:--outer-pad={`${grabRingOuter}px`}
 		onmousedown={onMouseDown}
-		onmousemove={onLensHover}
 		ontouchstart={onTouchStart}
 	>
-		<div class="lens-viewport">
-			<div
-				class="lens-content"
-				style:width={`${rect.width}px`}
-				style:height={`${rect.height}px`}
-				style:transform={`
-					translate(
-						${lensSize / 2 - (x - rect.left) * zoom}px,
-						${lensSize / 2 - (y - rect.top) * zoom}px
-					)
-					scale(${zoom})
-				`}
+		<svg class="lens-svg" width={lensSize} height={lensSize} viewBox="0 0 {lensSize} {lensSize}">
+			<defs>
+				<clipPath id="lens-svg-clip">
+					<circle cx={lensSize / 2} cy={lensSize / 2} r={lensSize / 2} />
+				</clipPath>
+			</defs>
+			<foreignObject
+				x="0"
+				y="0"
+				width={lensSize}
+				height={lensSize}
+				clip-path="url(#lens-svg-clip)"
 			>
-				{@html mirrorHtml}
-			</div>
-		</div>
+				<div
+					xmlns="http://www.w3.org/1999/xhtml"
+					class="lens-content"
+					style="width:{rect.width}px;height:{rect.height}px;transform:translate({lensSize / 2 - (x - rect.left) * zoom}px,{lensSize / 2 - (y - rect.top) * zoom}px) scale({zoom});transform-origin:top left;position:absolute;top:0;left:0;pointer-events:none;"
+				>
+					{@html mirrorHtml}
+				</div>
+			</foreignObject>
+		</svg>
 
 		<div class="lens-ring" aria-hidden="true"></div>
 		<div class="lens-glare" aria-hidden="true"></div>
 
 		{#if showHint && !dragging}
 			<div class="pulse-ring" aria-hidden="true" in:fade={{ duration: 800 }} out:fade={{ duration: 300 }}></div>
-			<div class="hint-wrapper" in:fade={{ duration: 800 }} out:fade={{ duration: 300 }}>
-				<div class="hint-bubble">Drag Edge to Move</div>
-				<div class="hint-arrow"></div>
-			</div>
 		{/if}
 	</div>
+
+	{#if showHint && !dragging}
+		<div
+			class="hint-wrapper"
+			style:left="{x}px"
+			style:top="{y - lensSize / 2 - 58}px"
+			in:fade={{ duration: 800 }}
+			out:fade={{ duration: 300 }}
+		>
+			<div class="hint-bubble">Drag Edge to Move</div>
+			<div class="hint-arrow"></div>
+		</div>
+	{/if}
 {/if}
 
 <style>
@@ -208,10 +257,24 @@
 		left: 0;
 		z-index: 999999;
 		border-radius: 50%;
-		overflow: visible;
+		overflow: hidden;
 		pointer-events: auto;
 		will-change: transform;
 		animation: lens-fade-in 0.2s ease-out;
+		box-shadow:
+			0 4px 20px rgba(0, 0, 0, 0.3),
+			0 0 50px 6px rgba(0, 0, 0, 0.12);
+	}
+
+	.lens.high-contrast {
+		box-shadow:
+			0 0 0 3px white,
+			0 4px 20px rgba(255, 255, 255, 0.5),
+			0 0 50px 6px rgba(255, 255, 255, 0.4);
+	}
+
+	.lens.high-contrast :global(.lens-ring) {
+		border-color: white !important;
 	}
 
 	@keyframes lens-fade-in {
@@ -219,22 +282,23 @@
 		to { opacity: 1; }
 	}
 
-	.lens-viewport {
+	.lens-svg {
 		position: absolute;
 		inset: var(--outer-pad);
-		overflow: hidden;
-		border-radius: 50%;
 		pointer-events: none;
+		border-radius: 50%;
 		box-shadow:
-			0 0 10px 4px rgba(0, 0, 0, 0.18),
-			0 0 30px 10px rgba(0, 0, 0, 0.1);
+			0 0 0 2px rgba(0, 0, 0, 0.15),
+			0 4px 16px rgba(0, 0, 0, 0.25),
+			0 0 40px 4px rgba(0, 0, 0, 0.12);
 		transition: box-shadow 0.15s;
 	}
 
-	.lens.dragging .lens-viewport {
+	.lens.dragging .lens-svg {
 		box-shadow:
-			0 0 14px 6px rgba(0, 0, 0, 0.22),
-			0 0 40px 14px rgba(0, 0, 0, 0.12);
+			0 0 0 2px rgba(0, 0, 0, 0.2),
+			0 6px 24px rgba(0, 0, 0, 0.3),
+			0 0 50px 8px rgba(0, 0, 0, 0.15);
 	}
 
 	.lens-content {
@@ -249,17 +313,47 @@
 		pointer-events: none !important;
 	}
 
+	.lens-content :global(img),
+	.lens-content :global(video),
+	.lens-content :global(canvas) {
+		will-change: auto !important;
+		transform: none !important;
+		-webkit-transform: none !important;
+		backface-visibility: visible !important;
+		-webkit-backface-visibility: visible !important;
+	}
+
+	.lens-content :global(.idle-overlay),
+	.lens-content :global(.zoom-controls) {
+		display: none !important;
+	}
+
+	.lens-content :global(.chatbot-root),
+	.lens-content :global(.backdrop) {
+		position: absolute !important;
+	}
+
+	.lens-content :global(.chatbot-root) {
+		display: block !important;
+		visibility: visible !important;
+		z-index: 9999 !important;
+	}
+
+	.lens-content :global(.backdrop) {
+		background: transparent !important;
+	}
+
 	.lens-ring {
 		position: absolute;
 		inset: var(--outer-pad);
 		border-radius: 50%;
 		pointer-events: none;
 		z-index: 5;
+		border: 2px solid rgba(0, 0, 0, 0.12);
 		box-shadow:
-			inset 0 0 60px 30px rgba(0, 0, 0, 0.06),
-			inset 0 0 35px 18px rgba(0, 0, 0, 0.05),
-			inset 0 0 16px 8px rgba(0, 0, 0, 0.04),
-			inset 0 0 6px 2px rgba(0, 0, 0, 0.03);
+			0 4px 20px rgba(0, 0, 0, 0.3),
+			0 0 40px 4px rgba(0, 0, 0, 0.1),
+			inset 0 0 8px 2px rgba(0, 0, 0, 0.04);
 	}
 
 	.lens-glare {
@@ -317,11 +411,9 @@
 	}
 
 	.hint-wrapper {
-		position: absolute;
-		top: calc(var(--outer-pad) - 58px);
-		left: 50%;
+		position: fixed;
 		transform: translateX(-50%);
-		z-index: 20;
+		z-index: 1000000;
 		pointer-events: none;
 		display: flex;
 		flex-direction: column;

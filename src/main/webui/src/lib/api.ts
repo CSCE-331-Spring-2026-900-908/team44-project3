@@ -100,6 +100,10 @@ export async function getItemsByCategory(category: string): Promise<MenuItem[]> 
     return request<MenuItem[]>(`/menu/items?category=${encodeURIComponent(category)}`);
 }
 
+export async function getTopMenuItems(days = 7, limit = 5): Promise<MenuItem[]> {
+    return request<MenuItem[]>(`/menu/top-items?days=${days}&limit=${limit}`);
+}
+
 export async function addMenuItem(item: Omit<MenuItem, 'menuItemId' | 'hasImage'>): Promise<number> {
     return request<number>('/menu/items', {
         method: 'POST',

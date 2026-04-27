@@ -36,7 +36,7 @@
         variants.find(v => v.size === selectedSize) ?? item
     );
 
-    const sweetnessLevels: SweetnessLevel[] = ['0%', '25%', '50%', '75%', '100%'];
+    const sweetnessLevels: SweetnessLevel[] = ['0%', '25%', '50%', '75%', '100%', '125%'];
     const iceLevels: IceLevel[] = ['No Ice', 'Less Ice', 'Regular Ice', 'Extra Ice'];
 
     let selectedSize = $state('Medium');

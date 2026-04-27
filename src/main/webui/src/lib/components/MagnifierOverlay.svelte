@@ -83,7 +83,7 @@
 	function resetHintTimer() {
 		showHint = false;
 		if (hintTimer) clearTimeout(hintTimer);
-		hintTimer = setTimeout(() => { showHint = true; }, 5000);
+		hintTimer = setTimeout(() => { showHint = true; }, 3000);
 	}
 
 	onMount(async () => {

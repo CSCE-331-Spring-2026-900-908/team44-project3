@@ -4,7 +4,7 @@
 
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
-    import { getCategories, getItemsByCategory, menuItemImageByName } from '$lib/api';
+    import { getAllMenuItems, getCategories, getItemsByCategory, getTopMenuItems, menuItemImageByName } from '$lib/api';
     import { getCustomer, clearCustomer } from '$lib/stores/auth.svelte';
     import { formatCurrency, TAX_RATE, toTitleCase } from '$lib/utils';
     import ItemCustomization from '$lib/components/ItemCustomization.svelte';
@@ -17,15 +17,31 @@
     import { magnifierEnabled } from '$lib/stores/magnifier';
 	import MagnifierOverlay from '$lib/components/MagnifierOverlay.svelte';
 
+    const HOT_DRINKS = 'hot_drinks';
+    const TOP_5 = 'top_5';
+
     const categoryEmojis: Record<string, string> = {
-        milk_tea: '\u{1F95B}',
-        fruit_tea: '\u{1F353}',
-        slush: '\u{1F9CA}',
-        coffee: '\u2615',
-        classic: '\u{1F375}',
-        seasonal: '\u{1F338}',
-        topping: '\u{1F369}'
+        'milky series': '\ud83e\udd5b',
+        'fresh brew': '\ud83e\uded6',
+        'fruit tea': '\ud83c\udf53',
+        'fruity beverage': '\ud83c\udf79',
+        'new matcha series': '\ud83c\udf75',
+        'ice-blended': '\ud83e\uddca',
+        'topping': '\ud83c\udf61',
+        'seasonal poob': '\ud83c\udf38',
+        // 'non-caffeinated' has no obvious match \u2014 falls back to \ud83e\uddcb
+        [HOT_DRINKS]: '\u2668\ufe0f',
+        [TOP_5]: '\ud83c\udfc6'
     };
+
+    function emojiFor(cat: string | null | undefined): string {
+        if (!cat) return '\u{1F9CB}';
+        const lower = cat.toLowerCase();
+        return categoryEmojis[cat]
+            ?? categoryEmojis[lower]
+            ?? categoryEmojis[lower.replace(/[_-]+/g, ' ')]
+            ?? '\u{1F9CB}';
+    }
 
     function groupAddOns(addOns: MenuItem[]): [string, number, number][] {
         const map = new Map<number, { name: string; qty: number; price: number }>();
@@ -195,17 +211,32 @@
 
     async function loadCategories() {
         try {
-            categories = await getCategories();
+            const fetched = await getCategories();
+            const seasonalKey = fetched.find(c => c.toLowerCase().includes('seasonal'));
+            const rest = fetched.filter(c => c !== seasonalKey);
+            categories = [
+                TOP_5,
+                ...(seasonalKey ? [seasonalKey] : []),
+                ...rest,
+                HOT_DRINKS
+            ];
             if (categories.length > 0) selectedCategory = categories[0] ?? '';
         } catch {
-            categories = [];
+            categories = [TOP_5, HOT_DRINKS];
         }
     }
 
     async function loadItems(category: string) {
         itemsLoading = true;
         try {
-            items = await getItemsByCategory(category);
+            if (category === HOT_DRINKS) {
+                const all = await getAllMenuItems();
+                items = all.filter(i => i.isHot);
+            } else if (category === TOP_5) {
+                items = await getTopMenuItems(7, 5);
+            } else {
+                items = await getItemsByCategory(category);
+            }
         } catch {
             items = [];
         } finally {
@@ -342,6 +373,7 @@
     }
 
     function formatCategory(cat: string): string {
+        if (cat === TOP_5) return "Bob's Best";
         return cat.replace(/_/g, ' ');
     }
 
@@ -405,7 +437,7 @@
                     <h2>{formatCategory(selectedCategory)}</h2>
                     <p>{itemGroups.length} {itemGroups.length === 1 ? 'item' : 'items'} available</p>
                 </div>
-                <div class="hero-emoji">{categoryEmojis[selectedCategory] ?? '\u{1F9CB}'}</div>
+                <div class="hero-emoji">{emojiFor(selectedCategory)}</div>
             </div>
 
             <!-- Category pills -->
@@ -416,7 +448,7 @@
                         class:active={selectedCategory === cat}
                         onclick={() => (selectedCategory = cat)}
                     >
-                        <span class="cat-emoji">{categoryEmojis[cat] ?? '\u{1F9CB}'}</span>
+                        <span class="cat-emoji">{emojiFor(cat)}</span>
                         <span class="cat-label">{formatCategory(cat)}</span>
                     </button>
                 {/each}
@@ -446,7 +478,7 @@
                                 {#if variants[0].hasImage}
                                     <img src={menuItemImageByName(variants[0].name)} alt={variants[0].name} class="item-img" style="max-width:100%;max-height:100%;object-fit:contain;" />
                                 {:else}
-                                    {categoryEmojis[variants[0].category] ?? '\u{1F9CB}'}
+                                    {emojiFor(variants[0].category)}
                                 {/if}
                             </div>
                             <div class="item-info">
@@ -502,7 +534,7 @@
                                 {#if cartItem.item.hasImage}
                                     <img src={menuItemImageByName(cartItem.item.name)} alt={cartItem.item.name} class="cart-img" style="max-width:100%;max-height:100%;object-fit:contain;" />
                                 {:else}
-                                    {categoryEmojis[cartItem.item.category] ?? '\u{1F9CB}'}
+                                    {emojiFor(cartItem.item.category)}
                                 {/if}
                             </div>
                             <div class="cart-card-info">
@@ -732,7 +764,7 @@
     highContrast={highContrast}
     magnifierOn={false}
     onnewsale={newSale}
-    onclose={() => (showComplete = false)}
+    onclose={newSale}
 />
 
 <!-- Chatbot UI (floating) -->
@@ -905,13 +937,13 @@
 
     .cat-pill {
         display: flex;
-        flex: 1;
+        flex: 0 0 auto;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        min-width: 100px;
-        padding: clamp(0.75rem, 1.5vw, 1.25rem) clamp(0.5rem, 1vw, 1rem);
+        min-width: 140px;
+        padding: clamp(0.75rem, 1.5vw, 1.25rem) clamp(0.75rem, 1.25vw, 1.25rem);
         border-radius: 16px;
         border: 2px solid transparent;
         background: white;
@@ -939,6 +971,8 @@
         font-weight: 600;
         text-transform: capitalize;
         color: #555;
+        line-height: 1.15;
+        white-space: nowrap;
     }
 
     .cat-pill.active .cat-label {
@@ -962,19 +996,19 @@
     /* ── Items Grid ── */
     .items-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(clamp(160px, 18vw, 260px), 1fr));
-        gap: clamp(0.75rem, 1.5vw, 1.25rem);
+        grid-template-columns: repeat(auto-fill, minmax(clamp(150px, 16vw, 230px), 1fr));
+        gap: clamp(0.6rem, 1.2vw, 1rem);
     }
 
     .item-card {
         background: white;
         border-radius: 10px;
-        padding: clamp(0.4rem, 0.8vw, 0.6rem) clamp(0.6rem, 1.2vw, 1rem) clamp(0.75rem, 1.5vw, 1rem);
+        padding: clamp(0.35rem, 0.7vw, 0.5rem) clamp(0.5rem, 1vw, 0.85rem) clamp(0.55rem, 1.1vw, 0.75rem);
         border: none;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.35rem;
         cursor: pointer;
         transition:
             transform 0.15s,
@@ -995,12 +1029,14 @@
 
     .item-icon {
         font-size: clamp(2.5rem, 4vw, 3.5rem);
-        margin-bottom: 0.1rem;
-        width: clamp(5.75rem, 11.5vw, 9.5rem);
-        height: clamp(6.75rem, 13.5vw, 10.5rem);
+        margin-bottom: 0;
+        width: 100%;
+        aspect-ratio: 1.05 / 1;
+        max-height: clamp(8rem, 16vw, 13rem);
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 0.15rem 0;
     }
 
     .item-img {

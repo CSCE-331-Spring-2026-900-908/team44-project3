@@ -123,8 +123,26 @@
         }
     }
 
-    function addSize() {
-        sizes = [...sizes, newSizeEntry(null, 'regular', 0)];
+    async function addSize() {
+        const persistedSource = sizes.find(s => s.menuItemId !== null);
+        if (persistedSource && !persistedSource.ingredientsLoaded) {
+            try {
+                const contents = await getMenuItemContents(persistedSource.menuItemId!);
+                persistedSource.ingredients = contents.map(c => ({ name: c.itemName, quantity: Number(c.quantity) }));
+            } catch {
+                persistedSource.ingredients = [];
+            }
+            persistedSource.ingredientsLoaded = true;
+        }
+        const source = persistedSource ?? sizes.find(s => s.ingredients.length > 0);
+        const inherited: IngredientRow[] = source
+            ? source.ingredients.map(i => ({ name: i.name, quantity: i.quantity }))
+            : [];
+        const entry = newSizeEntry(null, 'regular', 0);
+        entry.ingredients = inherited;
+        entry.ingredientsLoaded = true;
+        entry.ingredientsDirty = inherited.length > 0;
+        sizes = [...sizes, entry];
     }
 
     function removeSize(index: number) {
@@ -311,7 +329,7 @@
         <section class="sizes-section">
             <div class="section-header">
                 <h4>Sizes &amp; Pricing</h4>
-                <button type="button" class="btn-ghost" onclick={addSize}>+ Add Size</button>
+                <button type="button" class="btn-ghost" onclick={() => { void addSize(); }}>+ Add Size</button>
             </div>
             {#each sizes as entry, i (i)}
                 <div class="size-block">

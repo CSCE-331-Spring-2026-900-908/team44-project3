@@ -37,6 +37,15 @@ public class MenuResource {
         return menuService.getAllMenuItems();
     }
 
+    @GET
+    @Path("/top-items")
+    public List<MenuItem> getTopItems(
+            @QueryParam("days") @DefaultValue("7") int days,
+            @QueryParam("limit") @DefaultValue("5") int limit
+    ) {
+        return menuService.getTopItems(days, limit);
+    }
+
     @POST
     @Path("/items")
     public Response addItem(MenuItem item) {

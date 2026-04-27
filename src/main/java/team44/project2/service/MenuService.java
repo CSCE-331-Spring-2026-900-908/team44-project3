@@ -72,6 +72,25 @@ public class MenuService {
             ORDER BY category, name
             """.formatted(MENU_COLS);
 
+    private static final String GET_TOP_ITEMS = """
+            SELECT %s
+            FROM menu_items
+            WHERE is_available = true
+              AND menu_items.name IN (
+                SELECT m.name
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                JOIN menu_items m ON oi.menu_item_id = m.menu_item_id
+                WHERE o.timestamp >= NOW() - (? * INTERVAL '1 day')
+                  AND oi.parent_item_id IS NULL
+                  AND m.category != 'topping'
+                GROUP BY m.name
+                ORDER BY SUM(oi.quantity) DESC
+                LIMIT ?
+              )
+            ORDER BY menu_items.name, menu_items.size
+            """.formatted(MENU_COLS);
+
     private static final String INSERT_CONTENT = """
             INSERT INTO menu_item_contents (menu_item_id, inventory_id, quantity)
             VALUES (?, ?, ?)
@@ -129,6 +148,33 @@ public class MenuService {
             }
         } catch (Exception e) {
             Log.error("Failed to load all menu items", e);
+        }
+
+        return items;
+    }
+
+    /**
+     * Returns all variants of the top-N most-purchased menu items in the past
+     * {@code days} days, ranked by total quantity sold. Add-ons and toppings are
+     * excluded from the ranking.
+     *
+     * @param days  Lookback window in days.
+     * @param limit Number of distinct item names to return variants for.
+     * @return Menu item variants for the top-N names, ordered by name then size.
+     */
+    public List<MenuItem> getTopItems(int days, int limit) {
+        List<MenuItem> items = new ArrayList<>();
+
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(GET_TOP_ITEMS)) {
+            stmt.setInt(1, days);
+            stmt.setInt(2, limit);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                items.add(mapMenuItem(rs));
+            }
+        } catch (Exception e) {
+            Log.error("Failed to load top items", e);
         }
 
         return items;

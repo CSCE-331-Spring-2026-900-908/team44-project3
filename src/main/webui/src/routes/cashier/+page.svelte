@@ -406,7 +406,7 @@
     customerEmail={customer?.email ?? ''}
     cart={cart}
     onnewsale={newSale}
-    onclose={() => (showComplete = false)}
+    onclose={newSale}
 />
 {/if}
 

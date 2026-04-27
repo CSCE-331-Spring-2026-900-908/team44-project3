@@ -5,11 +5,11 @@ package team44.project2.model.menu.enums;
  */
 public enum SweetnessLevel {
     ZERO("0%"),
-    TEN("10%"),
-    THIRTY("30%"),
+    TWENTY_FIVE("25%"),
     FIFTY("50%"),
+    SEVENTY_FIVE("75%"),
     HUNDRED("100%"),
-    ONE_TWENTY("120%");
+    ONE_TWENTY_FIVE("125%");
 
     private final String label;
 

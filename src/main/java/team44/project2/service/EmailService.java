@@ -2,7 +2,7 @@ package team44.project2.service;
 
 import io.quarkus.logging.Log;
 import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.reactive.ReactiveMailer;
+import io.quarkus.mailer.Mailer;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -14,7 +14,7 @@ import java.util.List;
 public class EmailService {
 
     @Inject
-    ReactiveMailer mailer;
+    Mailer mailer;
 
     public record AddOnItem(String name, BigDecimal price) {}
 
@@ -39,14 +39,11 @@ public class EmailService {
     ) {
         try {
             String html = buildReceiptHtml(orderId, subtotal, tip, total, pointsEarned, items);
-            mailer.send(Mail.withHtml(toEmail, "Your Boba Receipt – Order #" + orderId, html))
-                    .subscribe().with(
-                            v -> Log.infof("Receipt email sent to %s for order #%d", toEmail, orderId),
-                            e -> Log.errorf(e, "Failed to send receipt email to %s for order #%d", toEmail, orderId)
-                    );
+            mailer.send(Mail.withHtml(toEmail, "Your Boba Receipt – Order #" + orderId, html));
+            Log.infof("Receipt email sent to %s for order #%d", toEmail, orderId);
             return true;
         } catch (Exception e) {
-            Log.error("Failed to send receipt email to " + toEmail, e);
+            Log.errorf(e, "Failed to send receipt email to %s for order #%d", toEmail, orderId);
             return false;
         }
     }

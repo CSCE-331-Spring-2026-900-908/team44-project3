@@ -24,6 +24,8 @@
 
 	const grabRingOuter = 0;
 
+	let scrollMap: Map<number, { top: number; left: number }> = new Map();
+
 	function refreshMirror() {
 		if (!targetEl) return;
 		const clone = targetEl.cloneNode(true) as HTMLElement;
@@ -39,8 +41,44 @@
 				cloned.setAttribute('value', v);
 			}
 		});
+
+		const descendants = targetEl.querySelectorAll('*');
+		scrollMap = new Map();
+		descendants.forEach((el, i) => {
+			const e = el as HTMLElement;
+			if (e.scrollTop > 0 || e.scrollLeft > 0) {
+				scrollMap.set(i, { top: e.scrollTop, left: e.scrollLeft });
+			}
+		});
+
 		mirrorHtml = clone.innerHTML;
 	}
+
+	let scrollRaf: number | null = null;
+	function onScroll() {
+		if (scrollRaf !== null) return;
+		scrollRaf = requestAnimationFrame(() => {
+			scrollRaf = null;
+			refreshMirror();
+		});
+	}
+
+	$effect(() => {
+		mirrorHtml;
+		if (!lensEl) return;
+		queueMicrotask(() => {
+			const cloneRoot = lensEl.querySelector('.lens-content');
+			if (!cloneRoot) return;
+			const ds = cloneRoot.querySelectorAll('*');
+			scrollMap.forEach((s, i) => {
+				const el = ds[i] as HTMLElement | undefined;
+				if (el) {
+					el.scrollTop = s.top;
+					el.scrollLeft = s.left;
+				}
+			});
+		});
+	});
 
 	function resetHintTimer() {
 		showHint = false;
@@ -72,6 +110,7 @@
 		document.addEventListener('change', refreshMirror, true);
 		document.addEventListener('focusin', refreshMirror, true);
 		document.addEventListener('focusout', refreshMirror, true);
+		document.addEventListener('scroll', onScroll, true);
 
 		resetHintTimer();
 
@@ -85,6 +124,8 @@
 			document.removeEventListener('change', refreshMirror, true);
 			document.removeEventListener('focusin', refreshMirror, true);
 			document.removeEventListener('focusout', refreshMirror, true);
+			document.removeEventListener('scroll', onScroll, true);
+			if (scrollRaf !== null) cancelAnimationFrame(scrollRaf);
 			if (hintTimer) clearTimeout(hintTimer);
 		};
 	});

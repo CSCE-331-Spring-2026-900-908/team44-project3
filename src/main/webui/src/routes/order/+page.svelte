@@ -418,7 +418,7 @@
             <h1>Boba Bob's</h1>
         </div>
         <div class="header-right">
-            <WeatherMini />
+            <WeatherMini highContrast={highContrast} />
             <button class="header-btn accessibility" onclick={toggleMagnifier}> Screen Magnifier </button>
             <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}> High Contrast </button>
             <LanguageSelector />

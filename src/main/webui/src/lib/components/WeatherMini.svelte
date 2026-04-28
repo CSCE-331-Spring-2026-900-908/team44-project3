@@ -1,6 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
+  interface Props {
+    highContrast?: boolean;
+  }
+
+  let { highContrast = false }: Props = $props();
+
 //emojis for api
   const WMO_CODES: Record<number, string> = {
     0:  '☀️',
@@ -67,18 +73,24 @@
 </script>
 
 {#if loading}
-  <span class="weather-mini">...</span>
+  <span class="weather-mini" class:high-contrast={highContrast}>...</span>
 {:else if temp !== null}
-  <span class="weather-mini" title="Current weather">{emoji} {temp}°F · {date}</span>
+  <span class="weather-mini" class:high-contrast={highContrast} title="Current weather">{emoji} {temp}°F · {date}</span>
 {/if}
 
 <style>
   .weather-mini {
-    font-size: 0.8rem;
+    font-size: 1.0rem;
     color: rgb(0, 0, 0);
     white-space: nowrap;
     padding: 0.2rem 0.5rem;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 6px;
+  }
+
+  .weather-mini.high-contrast {
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid #ffffff;
   }
 </style>

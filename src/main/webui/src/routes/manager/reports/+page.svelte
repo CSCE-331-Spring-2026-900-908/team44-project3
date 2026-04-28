@@ -20,7 +20,7 @@
     let salesLoading = $state(false);
 
     // X-Report state
-    let xHour = $state(12);
+    let xHour = $state(new Date().getHours());
     let xData = $state<PaymentMethodSummary[]>([]);
     let xLoading = $state(false);
 

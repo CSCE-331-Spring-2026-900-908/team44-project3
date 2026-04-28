@@ -463,37 +463,6 @@ public class ReportService {
              PreparedStatement ps = conn.prepareStatement(GET_HOURLY_PAYMENT_SUMMARY)) {
 
             ps.setInt(1, hour);
-            if (hasZRunToday()) {
-        results.add(new PaymentMethodSummary(
-                LocalDate.now(),
-                hour,
-                "CASH",
-                0,
-                BigDecimal.ZERO
-        ));
-        results.add(new PaymentMethodSummary(
-                LocalDate.now(),
-                hour,
-                "CARD",
-                0,
-                BigDecimal.ZERO
-        ));
-        results.add(new PaymentMethodSummary(
-                LocalDate.now(),
-                hour,
-                "GIFT",
-                0,
-                BigDecimal.ZERO
-        ));
-        results.add(new PaymentMethodSummary(
-                LocalDate.now(),
-                hour,
-                "ONFILE",
-                0,
-                BigDecimal.ZERO
-        ));
-
-        return results;}
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     java.sql.Date sqlDate = rs.getDate("sale_date");

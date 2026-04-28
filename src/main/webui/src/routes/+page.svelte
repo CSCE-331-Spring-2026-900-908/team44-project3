@@ -190,27 +190,11 @@
         --tile-to: #5a4330;
     }
 
-    .tile::before {
-        content: '';
-        position: absolute;
-        top: -40%;
-        right: -30%;
-        width: 180px;
-        height: 180px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.12);
-        transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
-
     .tile:hover {
         transform: translateY(-4px);
         box-shadow:
             0 20px 30px -12px rgba(45, 32, 23, 0.3),
             0 8px 16px -8px rgba(45, 32, 23, 0.15);
-    }
-
-    .tile:hover::before {
-        transform: scale(1.25) translate(-10%, 10%);
     }
 
     .tile:hover .tile-arrow {
@@ -269,7 +253,6 @@
 
     @media (prefers-reduced-motion: reduce) {
         .tile,
-        .tile::before,
         .tile-arrow {
             transition: none;
         }

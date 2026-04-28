@@ -28,8 +28,16 @@
     let newItemCost = $state(0);
     let showAddForm = $state(false);
 
-    let restockQty = $state(0);
+    let restockQtys = $state<Record<number, number>>({});
     let restockMsg = $state('');
+
+    function getRestockQty(id: number): number {
+        return restockQtys[id] ?? 0;
+    }
+
+    function setRestockQty(id: number, val: number) {
+        restockQtys[id] = Number.isFinite(val) && val > 0 ? val : 0;
+    }
 
     let lowStockItems = $derived(inventory.filter((i) => i.currentQuantity <= i.reorderThreshold));
 
@@ -96,13 +104,16 @@
     }
 
     async function handleRestock(item: Inventory) {
-        if (restockQty <= 0) return;
+        const qty = getRestockQty(item.inventoryId);
+        if (qty <= 0) return;
         restockMsg = '';
         try {
-            await createRestockOrder(getEmployeeId(), item.inventoryId, restockQty);
+            await createRestockOrder(getEmployeeId(), item.inventoryId, qty);
             restockMsg = `Restock order created for ${item.itemName}.`;
-            restockQty = 0;
-            await loadInventory();
+            setRestockQty(item.inventoryId, 0);
+            try {
+                inventory = await getAllInventory();
+            } catch { /* keep showing previous list if refresh fails */ }
         } catch {
             restockMsg = 'Failed to create restock order.';
         }
@@ -253,7 +264,8 @@
                         <input
                             type="number"
                             min="1"
-                            bind:value={restockQty}
+                            value={getRestockQty(item.inventoryId) || ''}
+                            oninput={(e) => setRestockQty(item.inventoryId, Number((e.currentTarget as HTMLInputElement).value))}
                             placeholder="Qty"
                             class="restock-input"
                         />

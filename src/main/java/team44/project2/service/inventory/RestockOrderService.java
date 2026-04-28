@@ -29,6 +29,13 @@ public class RestockOrderService {
         RETURNING restock_id
         """;
 
+    private static final String APPLY_RESTOCK_TO_INVENTORY = """
+        UPDATE inventory
+        SET current_quantity = COALESCE(current_quantity, 0) + ?,
+            last_restock_date = CURRENT_DATE
+        WHERE inventory_id = ?
+        """;
+
     private static final String GET_ALL_ORDERS = """
         SELECT restock_id, employee_id, inventory_id, quantity_ordered, order_date, status
         FROM restock_orders
@@ -47,26 +54,52 @@ public class RestockOrderService {
      *         {@code null} if the insert failed.
      */
     public RestockOrder createRestockOrder(int employeeId, int inventoryId, BigDecimal quantity, LocalDateTime orderDate, String status) {
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement ps = conn.prepareStatement(CREATE_ORDER)) {
+        Connection conn = null;
+        try {
+            conn = dataSource.getConnection();
+            conn.setAutoCommit(false);
 
-            ps.setInt(1, employeeId);
-            ps.setInt(2, inventoryId);
-            ps.setBigDecimal(3, quantity);
-            ps.setTimestamp(4, Timestamp.valueOf(orderDate));
-            ps.setString(5, status);
+            int restockId;
+            try (PreparedStatement ps = conn.prepareStatement(CREATE_ORDER)) {
+                ps.setInt(1, employeeId);
+                ps.setInt(2, inventoryId);
+                ps.setBigDecimal(3, quantity);
+                ps.setTimestamp(4, Timestamp.valueOf(orderDate));
+                ps.setString(5, status);
 
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                int restockId = rs.getInt("restock_id");
-                return new RestockOrder(restockId, employeeId, inventoryId, quantity, orderDate, status);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        conn.rollback();
+                        return null;
+                    }
+                    restockId = rs.getInt("restock_id");
+                }
             }
+
+            try (PreparedStatement ps = conn.prepareStatement(APPLY_RESTOCK_TO_INVENTORY)) {
+                ps.setBigDecimal(1, quantity);
+                ps.setInt(2, inventoryId);
+                int updated = ps.executeUpdate();
+                if (updated == 0) {
+                    conn.rollback();
+                    return null;
+                }
+            }
+
+            conn.commit();
+            return new RestockOrder(restockId, employeeId, inventoryId, quantity, orderDate, status);
 
         } catch (SQLException e) {
             Log.error("Error creating restock order", e);
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ignore) {}
+            }
+            return null;
+        } finally {
+            if (conn != null) {
+                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignore) {}
+            }
         }
-
-        return null;
     }
 
     /**

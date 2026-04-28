@@ -106,6 +106,7 @@
 		document.addEventListener('mouseup', onPointerUp, true);
 		document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
 		document.addEventListener('touchend', onPointerUp, true);
+		document.addEventListener('touchcancel', onPointerUp, true);
 		document.addEventListener('input', refreshMirror, true);
 		document.addEventListener('change', refreshMirror, true);
 		document.addEventListener('focusin', refreshMirror, true);
@@ -120,6 +121,7 @@
 			document.removeEventListener('mouseup', onPointerUp, true);
 			document.removeEventListener('touchmove', onTouchMove, true);
 			document.removeEventListener('touchend', onPointerUp, true);
+			document.removeEventListener('touchcancel', onPointerUp, true);
 			document.removeEventListener('input', refreshMirror, true);
 			document.removeEventListener('change', refreshMirror, true);
 			document.removeEventListener('focusin', refreshMirror, true);
@@ -214,14 +216,29 @@
 		}
 	}
 
-	function onPointerUp(event: MouseEvent) {
-		if (dragging) {
-			dragging = false;
-			if (!didMove) {
-				clickThrough(event.clientX, event.clientY);
-			} else {
+	function onPointerUp(event: MouseEvent | TouchEvent) {
+		if (!dragging) return;
+		dragging = false;
+
+		let cx: number;
+		let cy: number;
+		if ('changedTouches' in event) {
+			const t = event.changedTouches[0];
+			if (!t) {
 				resetHintTimer();
+				return;
 			}
+			cx = t.clientX;
+			cy = t.clientY;
+		} else {
+			cx = event.clientX;
+			cy = event.clientY;
+		}
+
+		if (!didMove) {
+			clickThrough(cx, cy);
+		} else {
+			resetHintTimer();
 		}
 	}
 
@@ -300,6 +317,7 @@
 		border-radius: 50%;
 		overflow: hidden;
 		pointer-events: auto;
+		touch-action: none;
 		will-change: transform;
 		animation: lens-fade-in 0.2s ease-out;
 		box-shadow:

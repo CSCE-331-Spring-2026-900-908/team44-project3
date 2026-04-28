@@ -116,6 +116,7 @@
     onpointerdown={onDragStart}
     onpointermove={onDragMove}
     onpointerup={onDragEnd}
+    onpointercancel={onDragEnd}
 >
     {#if open}
         <div class="chat-window" class:open-up={openUp} class:open-left={openLeft} role="dialog" aria-label="Chat with us">
@@ -177,6 +178,7 @@
         justify-content: center;
         box-shadow: 0 6px 18px rgba(0,0,0,0.18);
         cursor: pointer;
+        touch-action: none;
     }
 
     .chat-toggle:hover { transform: translateY(-2px); }

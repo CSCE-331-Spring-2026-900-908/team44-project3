@@ -6,6 +6,7 @@
     import { resolve } from '$app/paths';
     import { getAllMenuItems, getCategories, getItemsByCategory, getTopMenuItems, menuItemImageByName } from '$lib/api';
     import { getCustomer, clearCustomer } from '$lib/stores/auth.svelte';
+    import { loadCartState, saveCartState, clearCartState } from '$lib/stores/cart-persistence';
     import { formatCurrency, TAX_RATE, toTitleCase } from '$lib/utils';
     import ItemCustomization from '$lib/components/ItemCustomization.svelte';
     import CustomerCheckIn from '$lib/components/CustomerCheckIn.svelte';
@@ -56,11 +57,13 @@
     const IDLE_TIMEOUT = 30;
     const IDLE_WARNING = 20;
 
+    const persistedCart = loadCartState('order');
+
     let categories = $state<string[]>([]);
     let selectedCategory = $state('');
     let items = $state<MenuItem[]>([]);
     let itemsLoading = $state(false);
-    let cart = $state<CartItem[]>([]);
+    let cart = $state<CartItem[]>(persistedCart?.cart ?? []);
     let customer = $state(getCustomer());
 
     let customizeItem = $state<MenuItem | null>(null);
@@ -83,7 +86,7 @@
 
     const POINTS_PER_REDEEM = 10;
 
-    let redeemedCounts = $state(new Map<number, number>());
+    let redeemedCounts = $state(persistedCart?.redeemedCounts ?? new Map<number, number>());
 
     let totalRedeemed = $derived(
         Array.from(redeemedCounts.values()).reduce((sum, n) => sum + n, 0)
@@ -153,6 +156,7 @@
     function exitToHome() {
         clearIdleTimer();
         clearCustomer();
+        clearCartState('order');
         void goto(resolve('/customer'));
     }
 
@@ -180,6 +184,10 @@
 
     $effect(() => {
         startIdleTimer();
+    });
+
+    $effect(() => {
+        saveCartState('order', { cart, redeemedCounts });
     });
 
     onDestroy(() => {
@@ -356,6 +364,7 @@
     function newSale() {
         clearIdleTimer();
         clearCustomer();
+        clearCartState('order');
         showComplete = false;
         void goto(resolve('/customer'));
     }
@@ -369,6 +378,7 @@
         showCheckIn = false;
         showPayment = false;
         showComplete = false;
+        clearCartState('order');
         resetIdle();
     }
 

@@ -4,6 +4,7 @@
     import { resolve } from '$app/paths';
     import { getCategories } from '$lib/api';
     import { getEmployee, getDisplayName, isManager } from '$lib/stores/auth.svelte';
+    import { loadCartState, saveCartState, clearCartState } from '$lib/stores/cart-persistence';
     import { logout as apiLogout } from '$lib/api';
     import { formatCurrency, TAX_RATE, toTitleCase } from '$lib/utils';
     import CategoryItems from '$lib/components/CategoryItems.svelte';
@@ -23,9 +24,11 @@
         return Array.from(map.values()).map(e => [e.name, e.qty, e.price]);
     }
 
+    const persistedCart = loadCartState('cashier');
+
     let categories = $state<string[]>([]);
     let selectedCategory = $state('');
-    let cart = $state<CartItem[]>([]);
+    let cart = $state<CartItem[]>(persistedCart?.cart ?? []);
     let customer = $state<Customer | null>(null);
 
     let customizeItem = $state<MenuItem | null>(null);
@@ -44,7 +47,7 @@
 
     const POINTS_PER_REDEEM = 10;
 
-    let redeemedCounts = $state(new Map<number, number>());
+    let redeemedCounts = $state(persistedCart?.redeemedCounts ?? new Map<number, number>());
 
     let totalRedeemed = $derived(
         Array.from(redeemedCounts.values()).reduce((sum, n) => sum + n, 0)
@@ -66,6 +69,10 @@
             void goto(resolve('/login'));
         }
         void loadCategories();
+    });
+
+    $effect(() => {
+        saveCartState('cashier', { cart, redeemedCounts });
     });
 
     async function loadCategories() {
@@ -190,9 +197,11 @@
         customer = null;
         redeemedCounts = new Map();
         showComplete = false;
+        clearCartState('cashier');
     }
 
     function logout() {
+        clearCartState('cashier');
         void apiLogout().then(() => goto(resolve('/login')));
     }
 </script>

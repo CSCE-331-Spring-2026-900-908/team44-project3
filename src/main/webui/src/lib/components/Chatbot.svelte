@@ -21,8 +21,8 @@
     let dragOffset = { x: 0, y: 0 };
     let dragStartX = 0;
     let dragStartY = 0;
-    let posX = $state<number | null>(null);
-    let posY = $state<number | null>(null);
+    let posX = $state(window.innerWidth - 410);
+    let posY = $state(window.innerHeight - 80);
     const DRAG_THRESHOLD = 5;
 
     function toggle() {

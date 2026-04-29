@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { MenuItem, MenuItemGroup } from '$lib/types';
     import { getAllMenuItemsForManager, deleteMenuItem } from '$lib/api';
-    import { formatCurrency, toTitleCase } from '$lib/utils';
+    import { formatCurrency, toTitleCase, compareSizes } from '$lib/utils';
     import MenuItemForm from '$lib/components/MenuItemForm.svelte';
 
     let items = $state<MenuItem[]>([]);
@@ -10,12 +10,8 @@
     let editingGroup = $state<MenuItemGroup | null>(null);
     let expandedGroups = $state<Set<string>>(new Set());
 
-    const sizeOrder: Record<string, number> = { small: 0, regular: 1, medium: 2, large: 3 };
-
     function sortVariants(variants: MenuItem[]): MenuItem[] {
-        return [...variants].sort((a, b) =>
-            (sizeOrder[a.size?.toLowerCase()] ?? 99) - (sizeOrder[b.size?.toLowerCase()] ?? 99)
-        );
+        return [...variants].sort((a, b) => compareSizes(a.size, b.size));
     }
 
     let groups = $derived((() => {

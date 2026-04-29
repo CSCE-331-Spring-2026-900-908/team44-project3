@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { MenuItem, CartItem, SweetnessLevel, IceLevel } from '$lib/types';
     import { getAddOns } from '$lib/api';
-    import { toTitleCase } from '$lib/utils';
+    import { toTitleCase, compareSizes } from '$lib/utils';
     import Modal from './Modal.svelte';
 
     let {
@@ -28,7 +28,7 @@
 
     let availableSizes = $derived(
         variants.length > 0
-            ? [...new Set(variants.map(v => v.size))]
+            ? [...new Set(variants.map(v => v.size))].sort(compareSizes)
             : item ? [item.size] : ['Medium']
     );
 

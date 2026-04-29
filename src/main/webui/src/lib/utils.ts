@@ -17,3 +17,18 @@ export function firstOfMonthISO(): string {
     d.setDate(1);
     return d.toISOString().split('T')[0] ?? '';
 }
+
+const SIZE_ORDER: Record<string, number> = {
+    small: 0,
+    regular: 1,
+    medium: 2,
+    large: 3
+};
+
+export function sizeRank(size: string | null | undefined): number {
+    return SIZE_ORDER[(size ?? '').toLowerCase()] ?? 99;
+}
+
+export function compareSizes(a: string | null | undefined, b: string | null | undefined): number {
+    return sizeRank(a) - sizeRank(b);
+}

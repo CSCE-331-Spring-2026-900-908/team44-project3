@@ -1,5 +1,5 @@
 export function toTitleCase(s: string): string {
-    return s.replace(/\b\w/g, (c) => c.toUpperCase());
+    return s.replace(/(^|[\s-])(\w)/g, (_, pre, c) => pre + c.toUpperCase());
 }
 
 export function formatCurrency(amount: number): string {

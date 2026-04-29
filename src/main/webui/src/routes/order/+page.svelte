@@ -384,6 +384,7 @@
 
     function formatCategory(cat: string): string {
         if (cat === TOP_5) return "Bob's Best";
+        if (cat.toLowerCase() === 'ice-blended') return 'Slushies';
         return cat.replace(/_/g, ' ');
     }
 
@@ -420,7 +421,7 @@
         <div class="header-right">
             <WeatherMini highContrast={highContrast} />
             <button class="header-btn accessibility" onclick={toggleMagnifier}> Screen Magnifier </button>
-            <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}> High Contrast </button>
+            <button class="header-btn accessibility" onclick={() => (highContrast = !highContrast)}>{highContrast ? 'Low Contrast' : 'High Contrast'}</button>
             <LanguageSelector />
             {#if customer}
                 <span class="welcome-text"

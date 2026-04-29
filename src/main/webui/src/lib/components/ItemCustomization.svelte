@@ -149,12 +149,16 @@
             <h4>Size</h4>
             <div class="option-row">
                 {#each availableSizes as size (size)}
+                    {@const sizeVariant = variants.find(v => v.size === size) ?? (item?.size === size ? item : null)}
                     <button
-                        class="option-btn"
+                        class="option-btn size-btn"
                         class:selected={selectedSize === size}
                         onclick={() => (selectedSize = size)}
                     >
-                        {toTitleCase(size)}
+                        <span class="size-name">{toTitleCase(size)}</span>
+                        {#if sizeVariant}
+                            <span class="size-price">${sizeVariant.basePrice.toFixed(2)}</span>
+                        {/if}
                     </button>
                 {/each}
             </div>
@@ -335,6 +339,27 @@
         transition:
             border-color var(--transition),
             background var(--transition);
+    }
+
+    .size-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.15rem;
+        min-width: 4.5rem;
+    }
+
+    .size-name {
+        font-weight: 600;
+    }
+
+    .size-price {
+        font-size: 0.75rem;
+        opacity: 0.75;
+    }
+
+    .option-btn.size-btn.selected .size-price {
+        opacity: 0.9;
     }
 
     .option-btn:hover {

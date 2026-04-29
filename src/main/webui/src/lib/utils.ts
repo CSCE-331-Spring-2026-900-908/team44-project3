@@ -20,9 +20,9 @@ export function firstOfMonthISO(): string {
 
 const SIZE_ORDER: Record<string, number> = {
     small: 0,
-    regular: 1,
-    medium: 2,
-    large: 3
+    medium: 1,
+    large: 2,
+    regular: 3
 };
 
 export function sizeRank(size: string | null | undefined): number {

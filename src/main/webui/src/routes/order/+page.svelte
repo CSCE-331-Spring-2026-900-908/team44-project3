@@ -7,7 +7,7 @@
     import { getAllMenuItems, getCategories, getItemsByCategory, getTopMenuItems, menuItemImageByName } from '$lib/api';
     import { getCustomer, clearCustomer } from '$lib/stores/auth.svelte';
     import { loadCartState, saveCartState, clearCartState } from '$lib/stores/cart-persistence';
-    import { formatCurrency, TAX_RATE, toTitleCase } from '$lib/utils';
+    import { formatCurrency, TAX_RATE, toTitleCase, compareSizes } from '$lib/utils';
     import ItemCustomization from '$lib/components/ItemCustomization.svelte';
     import CustomerCheckIn from '$lib/components/CustomerCheckIn.svelte';
     import PaymentModal from '$lib/components/PaymentModal.svelte';
@@ -254,7 +254,8 @@
 
     function openCustomization(variants: MenuItem[]) {
         customizeVariants = variants;
-        customizeItem = variants[0] ?? null;
+        const sorted = [...variants].sort((a, b) => compareSizes(a.size, b.size));
+        customizeItem = sorted[0] ?? null;
         showCustomize = true;
     }
 

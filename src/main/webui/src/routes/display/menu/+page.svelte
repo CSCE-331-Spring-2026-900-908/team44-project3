@@ -23,6 +23,14 @@
     const isOversized = (name: string) =>
         OVERSIZED_IMAGES.has(name.toLowerCase().trim());
 
+    type Temperature = 'hot' | 'cold' | null;
+    function temperatureFor(category: string): Temperature {
+        const c = category.toLowerCase().trim();
+        if (c === 'topping') return null;
+        if (c === 'fresh brew') return 'hot';
+        return 'cold';
+    }
+
     let slides = $state<Slide[]>([]);
     let currentIndex = $state(0);
 
@@ -115,6 +123,7 @@
 </script>
 
 {#snippet itemCard(item: Item, showCategory: boolean)}
+    {@const temp = temperatureFor(item.category)}
     <article class="item">
         <div class="img-wrap">
             {#if item.hasImage}
@@ -125,6 +134,14 @@
                 />
             {:else}
                 <span class="placeholder" aria-hidden="true">🧋</span>
+            {/if}
+            {#if temp}
+                <span class="temp-badge temp-{temp}">
+                    <span class="temp-icon" aria-hidden="true">
+                        {temp === 'hot' ? '🔥' : '🧊'}
+                    </span>
+                    <span>{temp === 'hot' ? 'Hot' : 'Cold'}</span>
+                </span>
             {/if}
         </div>
         <div class="info">
@@ -380,6 +397,7 @@
     }
 
     .img-wrap {
+        position: relative;
         flex: 1 1 auto;
         width: 100%;
         min-height: 35%;
@@ -399,6 +417,42 @@
     .img-wrap img.oversized {
         max-width: 50%;
         max-height: 50%;
+    }
+
+    .temp-badge {
+        position: absolute;
+        top: clamp(0.3rem, 1.5cqh, 0.7rem);
+        right: clamp(0.3rem, 1.5cqh, 0.7rem);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3em;
+        padding: clamp(0.2rem, 0.9cqh, 0.45rem) clamp(0.5rem, 1.4cqh, 0.85rem);
+        border-radius: 9999px;
+        font-size: clamp(0.6rem, 3.2cqh, 1.05rem);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        line-height: 1;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+    }
+
+    .temp-icon {
+        font-size: 1.15em;
+        line-height: 1;
+    }
+
+    .temp-hot {
+        background: rgba(254, 226, 226, 0.95);
+        color: #b91c1c;
+        border: 1px solid #fca5a5;
+    }
+
+    .temp-cold {
+        background: rgba(219, 234, 254, 0.95);
+        color: #1d4ed8;
+        border: 1px solid #93c5fd;
     }
 
     .placeholder {
